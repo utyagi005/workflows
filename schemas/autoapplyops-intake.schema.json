@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/utyagi005/workflows/schemas/autoapplyops-intake.schema.json",
+  "title": "AutoApplyOps Intake Payload",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["applicationId", "company", "role", "source"],
+  "properties": {
+    "applicationId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable idempotency key for the incoming application event."
+    },
+    "applicantName": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string",
+      "format": "email"
+    },
+    "company": {
+      "type": "string",
+      "minLength": 1
+    },
+    "role": {
+      "type": "string",
+      "minLength": 1
+    },
+    "deadline": {
+      "type": "string",
+      "format": "date"
+    },
+    "location": {
+      "type": "string"
+    },
+    "skills": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "notes": {
+      "type": "string"
+    },
+    "sharedSecret": {
+      "type": "string",
+      "description": "Optional simple shared secret for demo safety. Use signed HMAC verification in production."
+    },
+    "config": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "targetSkills": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "weights": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "deadline": { "type": "number", "minimum": 0 },
+            "skills": { "type": "number", "minimum": 0 },
+            "role": { "type": "number", "minimum": 0 },
+            "location": { "type": "number", "minimum": 0 },
+            "completeness": { "type": "number", "minimum": 0 },
+            "source": { "type": "number", "minimum": 0 }
+          }
+        },
+        "knownApplicationIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "requireSharedSecret": {
+          "type": "boolean"
+        },
+        "expectedSharedSecret": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

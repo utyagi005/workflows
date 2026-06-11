@@ -1,0 +1,369 @@
+[
+  {
+    "file": "samples/high-priority-application.json",
+    "applicationId": "demo-001",
+    "validationStatus": "valid",
+    "priority": "hot",
+    "route": "High Priority Follow-up",
+    "score": 90,
+    "nextStep": "send_follow_up_for_human_approval",
+    "sanitizedPayload": {
+      "applicationId": "demo-001",
+      "applicant": "DA",
+      "emailDomain": "example.com",
+      "company": "Northstar Robotics",
+      "role": "Software Engineering Intern",
+      "source": "career-page",
+      "deadline": "2026-06-16",
+      "location": "Remote",
+      "skills": [
+        "javascript",
+        "apis",
+        "automation",
+        "postgresql"
+      ],
+      "notesLength": 60,
+      "receivedAt": "2026-06-11T03:46:10.817Z"
+    },
+    "reasonCodes": [
+      "deadline_urgent",
+      "skill_match_4",
+      "role_high_fit",
+      "location_remote",
+      "payload_complete_5",
+      "source_high_signal"
+    ],
+    "decisionMatrix": [
+      {
+        "name": "deadline",
+        "points": 25,
+        "maxPoints": 25,
+        "reason": "deadline_urgent"
+      },
+      {
+        "name": "skills",
+        "points": 20,
+        "maxPoints": 30,
+        "reason": "skill_match_4"
+      },
+      {
+        "name": "role",
+        "points": 20,
+        "maxPoints": 20,
+        "reason": "role_high_fit"
+      },
+      {
+        "name": "location",
+        "points": 10,
+        "maxPoints": 10,
+        "reason": "location_remote"
+      },
+      {
+        "name": "completeness",
+        "points": 10,
+        "maxPoints": 10,
+        "reason": "payload_complete_5"
+      },
+      {
+        "name": "source",
+        "points": 5,
+        "maxPoints": 5,
+        "reason": "source_high_signal"
+      },
+      {
+        "name": "duplicate",
+        "points": 0,
+        "maxPoints": 0,
+        "reason": "not_applicable"
+      }
+    ]
+  },
+  {
+    "file": "samples/review-application.json",
+    "applicationId": "demo-002",
+    "validationStatus": "valid",
+    "priority": "review",
+    "route": "Review Queue",
+    "score": 61,
+    "nextStep": "batch_review",
+    "sanitizedPayload": {
+      "applicationId": "demo-002",
+      "applicant": "CR",
+      "emailDomain": "example.com",
+      "company": "Civic Data Lab",
+      "role": "Operations Intern",
+      "source": "job-board",
+      "deadline": "2026-07-10",
+      "location": "Hybrid",
+      "skills": [
+        "documentation",
+        "spreadsheets",
+        "sql",
+        "automation",
+        "api"
+      ],
+      "notesLength": 61,
+      "receivedAt": "2026-06-11T03:46:10.819Z"
+    },
+    "reasonCodes": [
+      "deadline_open",
+      "skill_match_3",
+      "role_medium_fit",
+      "location_workable",
+      "payload_complete_5",
+      "source_medium_signal"
+    ],
+    "decisionMatrix": [
+      {
+        "name": "deadline",
+        "points": 12,
+        "maxPoints": 25,
+        "reason": "deadline_open"
+      },
+      {
+        "name": "skills",
+        "points": 15,
+        "maxPoints": 30,
+        "reason": "skill_match_3"
+      },
+      {
+        "name": "role",
+        "points": 14,
+        "maxPoints": 20,
+        "reason": "role_medium_fit"
+      },
+      {
+        "name": "location",
+        "points": 7,
+        "maxPoints": 10,
+        "reason": "location_workable"
+      },
+      {
+        "name": "completeness",
+        "points": 10,
+        "maxPoints": 10,
+        "reason": "payload_complete_5"
+      },
+      {
+        "name": "source",
+        "points": 3,
+        "maxPoints": 5,
+        "reason": "source_medium_signal"
+      },
+      {
+        "name": "duplicate",
+        "points": 0,
+        "maxPoints": 0,
+        "reason": "not_applicable"
+      }
+    ]
+  },
+  {
+    "file": "samples/invalid-application.json",
+    "applicationId": "demo-003",
+    "validationStatus": "invalid",
+    "priority": "invalid",
+    "route": "Needs Manual Repair",
+    "score": 0,
+    "nextStep": "repair_payload",
+    "sanitizedPayload": {
+      "applicationId": "demo-003",
+      "applicant": "DA",
+      "emailDomain": null,
+      "company": "Missing Fields Inc.",
+      "role": "",
+      "source": "manual-entry",
+      "deadline": null,
+      "location": "Unknown",
+      "skills": [],
+      "notesLength": 0,
+      "receivedAt": "2026-06-11T03:46:10.819Z"
+    },
+    "reasonCodes": [
+      "missing_or_invalid_role"
+    ],
+    "decisionMatrix": []
+  },
+  {
+    "file": "samples/duplicate-application.json",
+    "applicationId": "demo-001",
+    "validationStatus": "valid",
+    "priority": "duplicate",
+    "route": "Duplicate Review",
+    "score": 45,
+    "nextStep": "merge_or_discard_duplicate",
+    "sanitizedPayload": {
+      "applicationId": "demo-001",
+      "applicant": "DA",
+      "emailDomain": "example.com",
+      "company": "Northstar Robotics",
+      "role": "Software Engineering Intern",
+      "source": "career-page",
+      "deadline": "2026-06-16",
+      "location": "Remote",
+      "skills": [
+        "javascript",
+        "automation"
+      ],
+      "notesLength": 0,
+      "receivedAt": "2026-06-11T03:46:10.819Z"
+    },
+    "reasonCodes": [
+      "deadline_urgent",
+      "skill_match_2",
+      "role_high_fit",
+      "location_remote",
+      "payload_complete_4",
+      "source_high_signal",
+      "duplicate_detected"
+    ],
+    "decisionMatrix": [
+      {
+        "name": "deadline",
+        "points": 25,
+        "maxPoints": 25,
+        "reason": "deadline_urgent"
+      },
+      {
+        "name": "skills",
+        "points": 10,
+        "maxPoints": 30,
+        "reason": "skill_match_2"
+      },
+      {
+        "name": "role",
+        "points": 20,
+        "maxPoints": 20,
+        "reason": "role_high_fit"
+      },
+      {
+        "name": "location",
+        "points": 10,
+        "maxPoints": 10,
+        "reason": "location_remote"
+      },
+      {
+        "name": "completeness",
+        "points": 10,
+        "maxPoints": 10,
+        "reason": "payload_complete_4"
+      },
+      {
+        "name": "source",
+        "points": 5,
+        "maxPoints": 5,
+        "reason": "source_high_signal"
+      },
+      {
+        "name": "duplicate",
+        "points": -35,
+        "maxPoints": 0,
+        "reason": "duplicate_detected"
+      }
+    ]
+  },
+  {
+    "file": "samples/secret-failure-application.json",
+    "applicationId": "demo-005",
+    "validationStatus": "invalid",
+    "priority": "invalid",
+    "route": "Needs Manual Repair",
+    "score": 0,
+    "nextStep": "repair_payload",
+    "sanitizedPayload": {
+      "applicationId": "demo-005",
+      "applicant": "SD",
+      "emailDomain": "example.com",
+      "company": "Webhook Safety Co",
+      "role": "Automation Intern",
+      "source": "career-page",
+      "deadline": null,
+      "location": "Unknown",
+      "skills": [],
+      "notesLength": 0,
+      "receivedAt": "2026-06-11T03:46:10.820Z"
+    },
+    "reasonCodes": [
+      "invalid_shared_secret"
+    ],
+    "decisionMatrix": []
+  },
+  {
+    "file": "samples/tuned-weights-application.json",
+    "applicationId": "demo-006",
+    "validationStatus": "valid",
+    "priority": "review",
+    "route": "Review Queue",
+    "score": 70,
+    "nextStep": "batch_review",
+    "sanitizedPayload": {
+      "applicationId": "demo-006",
+      "applicant": "TD",
+      "emailDomain": "example.com",
+      "company": "Configurable Systems",
+      "role": "Operations Intern",
+      "source": "job-board",
+      "deadline": "2026-07-10",
+      "location": "Hybrid",
+      "skills": [
+        "sql",
+        "automation",
+        "api"
+      ],
+      "notesLength": 0,
+      "receivedAt": "2026-06-11T03:46:10.820Z"
+    },
+    "reasonCodes": [
+      "deadline_open",
+      "skill_match_3",
+      "role_medium_fit",
+      "location_workable",
+      "payload_complete_4",
+      "source_medium_signal"
+    ],
+    "decisionMatrix": [
+      {
+        "name": "deadline",
+        "points": 7,
+        "maxPoints": 15,
+        "reason": "deadline_open"
+      },
+      {
+        "name": "skills",
+        "points": 34,
+        "maxPoints": 45,
+        "reason": "skill_match_3"
+      },
+      {
+        "name": "role",
+        "points": 14,
+        "maxPoints": 20,
+        "reason": "role_medium_fit"
+      },
+      {
+        "name": "location",
+        "points": 7,
+        "maxPoints": 10,
+        "reason": "location_workable"
+      },
+      {
+        "name": "completeness",
+        "points": 5,
+        "maxPoints": 5,
+        "reason": "payload_complete_4"
+      },
+      {
+        "name": "source",
+        "points": 3,
+        "maxPoints": 5,
+        "reason": "source_medium_signal"
+      },
+      {
+        "name": "duplicate",
+        "points": 0,
+        "maxPoints": 0,
+        "reason": "not_applicable"
+      }
+    ]
+  }
+]

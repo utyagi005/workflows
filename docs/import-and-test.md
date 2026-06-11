@@ -2,19 +2,25 @@
 
 ## Import
 
-Use `workflows/autoapplyops-intake.json`.
+Use both workflow exports:
+
+- `workflows/autoapplyops-intake.json`
+- `workflows/autoapplyops-error-handler.json`
 
 In n8n UI:
 
 1. Open n8n.
 2. Choose **Import from File** from the workflow menu.
 3. Select `workflows/autoapplyops-intake.json`.
-4. Keep the workflow inactive until you are ready to test.
+4. Select `workflows/autoapplyops-error-handler.json`.
+5. In the main workflow settings, set the error workflow to **AutoApplyOps - Error Handler**.
+6. Keep both workflows inactive until you are ready to test.
 
 With n8n CLI:
 
 ```bash
 n8n import:workflow --input=workflows/autoapplyops-intake.json
+n8n import:workflow --input=workflows/autoapplyops-error-handler.json
 ```
 
 For a directory of JSON workflow files:
@@ -88,3 +94,11 @@ npm run demo:video
 ```
 
 The local demo does not replace n8n testing, but it proves the scoring logic, sample payloads, screenshots, GIF preview, and demo video can be recreated without private credentials.
+
+## Generated Evidence
+
+`npm run verify` writes:
+
+- `docs/reports/sample-simulation.json`
+- `docs/reports/sample-simulation.md`
+- `docs/reports/workflow-scorecard.md`

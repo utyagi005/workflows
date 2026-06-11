@@ -25,9 +25,11 @@ The project shows:
 - Conditional routing for hot, review, low, duplicate, and invalid applications.
 - Duplicate detection for idempotency-style webhook replays.
 - Optional shared-secret validation for safer public webhook use.
+- Dedicated n8n error-handler workflow with sanitized owner-alert payloads.
 - Decision matrix output that explains each score contribution.
 - Automation hints for the next action, SLA, notification channel, and retryability.
 - Privacy-aware sanitized reporting.
+- Formal intake JSON schema, simulation report, and workflow scorecard.
 - Ready-to-edit follow-up drafts.
 - Interactive local demo, screenshots, GIF preview, and MP4 demo video.
 
@@ -55,6 +57,7 @@ flowchart LR
   E --> G
   F --> G
   H --> G
+  X["Error Trigger Workflow"] --> Y["Sanitized Owner Alert"]
 ```
 
 ## Repository Structure
@@ -63,12 +66,14 @@ flowchart LR
 .
 ├── demo/                         # Local browser demo dashboard
 ├── docs/                         # Project brief, demo script, import/security docs
+├── docs/reports/                 # Generated simulation and scorecard reports
+├── schemas/                      # Webhook payload contract
 ├── docs/assets/                  # Screenshots, concept image, and MP4 demo
 ├── samples/                      # Sanitized payload fixtures
 ├── scripts/                      # Workflow generation, validation, media capture
 ├── src/scoring.mjs               # Shared scoring and sanitization logic
 ├── tests/scoring.test.mjs        # Node test coverage
-└── workflows/autoapplyops-intake.json
+└── workflows/                    # Main intake and error-handler n8n workflows
 ```
 
 ## Quick Start
@@ -91,12 +96,15 @@ UI import:
 2. Create or open a workflow.
 3. Use the workflow menu and choose **Import from File**.
 4. Select `workflows/autoapplyops-intake.json`.
-5. Test with a sample file from `samples/`.
+5. Import `workflows/autoapplyops-error-handler.json`.
+6. In the main workflow settings, set the error workflow to **AutoApplyOps - Error Handler**.
+7. Test with a sample file from `samples/`.
 
 CLI import:
 
 ```bash
 n8n import:workflow --input=workflows/autoapplyops-intake.json
+n8n import:workflow --input=workflows/autoapplyops-error-handler.json
 ```
 
 n8n CLI docs note that imported workflows are deactivated by default, which is the safest state for a shared portfolio project: [docs.n8n.io/hosting/cli-commands](https://docs.n8n.io/hosting/cli-commands/).
@@ -162,8 +170,11 @@ npm run demo:video
 Verification covers:
 
 - Workflow JSON parses and contains required nodes.
+- Main workflow and error-handler workflow are both importable.
 - Obvious secret markers are absent.
 - Hot lead, review queue, duplicate, invalid secret, invalid payload, scoring-tuning, and sanitized logging tests pass.
+- Sample simulation report is generated.
+- Workflow scorecard reaches `100/100`.
 - Browser screenshots, GIF preview, and MP4 demo render from the actual local dashboard.
 
 ## Built With
@@ -180,5 +191,12 @@ Verification covers:
 - Replace simple shared-secret checking with signed HMAC validation for public webhooks.
 - Store idempotency keys in Redis, Postgres, Airtable, or n8n Data Tables.
 - Add a daily digest sub-workflow for queued applications.
+
+## Reports
+
+- [Sample simulation](docs/reports/sample-simulation.md)
+- [Workflow scorecard](docs/reports/workflow-scorecard.md)
+- [Research and recommendations](docs/research-and-recommendations.md)
+- [Operations runbook](docs/operations.md)
 
 GitHub recommends a README explain what the project does, why it is useful, and how people can use it. This repository follows that guidance from [GitHub Docs](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes).

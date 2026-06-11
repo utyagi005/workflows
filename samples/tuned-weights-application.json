@@ -1,0 +1,22 @@
+{
+  "applicationId": "demo-006",
+  "applicantName": "Tunable Demo",
+  "email": "tunable.demo@example.com",
+  "company": "Configurable Systems",
+  "role": "Operations Intern",
+  "deadline": "2026-07-10",
+  "location": "Hybrid",
+  "skills": ["SQL", "automation", "API"],
+  "source": "job-board",
+  "config": {
+    "targetSkills": ["sql", "automation", "api", "documentation"],
+    "weights": {
+      "deadline": 15,
+      "skills": 45,
+      "role": 20,
+      "location": 10,
+      "completeness": 5,
+      "source": 5
+    }
+  }
+}

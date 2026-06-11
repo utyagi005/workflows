@@ -353,6 +353,116 @@ const workflow = {
   ]
 };
 
+const errorWorkflow = {
+  name: "AutoApplyOps - Error Handler",
+  nodes: [
+    {
+      parameters: {
+        content:
+          "Attach this workflow in AutoApplyOps workflow settings as the Error workflow. It starts from Error Trigger, sanitizes the failure context, and creates an owner-alert payload without leaking raw applicant data.",
+        height: 220,
+        width: 360,
+        color: 5
+      },
+      id: "b40aa732-42a5-4800-9189-09f0a0f88a44",
+      name: "Error Handler Note",
+      type: "n8n-nodes-base.stickyNote",
+      typeVersion: 1,
+      position: [-760, -240]
+    },
+    {
+      parameters: {},
+      id: "2a9220b0-5a4f-4e1e-b1e6-cacbd6bf3701",
+      name: "Error Trigger",
+      type: "n8n-nodes-base.errorTrigger",
+      typeVersion: 1,
+      position: [-720, 40]
+    },
+    {
+      parameters: {
+        jsCode: `
+return items.map((item) => {
+  const payload = item.json || {};
+  const execution = payload.execution || {};
+  const workflow = payload.workflow || {};
+  const error = payload.error || {};
+  return {
+    json: {
+      alertType: "autoapplyops_workflow_error",
+      workflowName: workflow.name || "AutoApplyOps",
+      executionId: execution.id || "unknown",
+      failedAt: new Date().toISOString(),
+      errorName: error.name || "WorkflowError",
+      errorMessage: String(error.message || "Unknown error").slice(0, 300),
+      ownerAction: "Open the failed execution, inspect sanitized input, repair config or payload, then retry with currently saved workflow.",
+      piiPolicy: "Do not paste raw applicant payloads into chat/email alerts."
+    }
+  };
+});
+`.trim()
+      },
+      id: "4517da79-1eb5-40d6-9f34-02dc520d38ce",
+      name: "Sanitize Error Context",
+      type: "n8n-nodes-base.code",
+      typeVersion: 2,
+      position: [-440, 40]
+    },
+    {
+      parameters: {
+        jsCode:
+          "return items.map((item) => ({ json: { ...item.json, notificationChannel: 'workflow-owner', notificationStub: `[AutoApplyOps] ${item.json.workflowName} failed in execution ${item.json.executionId}: ${item.json.errorMessage}` } }));"
+      },
+      id: "69b18c16-d117-4a75-a83d-863e0ef6a630",
+      name: "Build Owner Alert",
+      type: "n8n-nodes-base.code",
+      typeVersion: 2,
+      position: [-160, 40]
+    }
+  ],
+  connections: {
+    "Error Trigger": {
+      main: [
+        [
+          {
+            node: "Sanitize Error Context",
+            type: "main",
+            index: 0
+          }
+        ]
+      ]
+    },
+    "Sanitize Error Context": {
+      main: [
+        [
+          {
+            node: "Build Owner Alert",
+            type: "main",
+            index: 0
+          }
+        ]
+      ]
+    }
+  },
+  active: false,
+  settings: {
+    executionOrder: "v1"
+  },
+  versionId: "autoapplyops-error-v1",
+  meta: {
+    templateCredsSetupCompleted: true,
+    instanceId: "portfolio-demo"
+  },
+  tags: [
+    {
+      name: "portfolio"
+    },
+    {
+      name: "error-handling"
+    }
+  ]
+};
+
 mkdirSync("workflows", { recursive: true });
 writeFileSync("workflows/autoapplyops-intake.json", `${JSON.stringify(workflow, null, 2)}\n`);
-console.log("Generated workflows/autoapplyops-intake.json");
+writeFileSync("workflows/autoapplyops-error-handler.json", `${JSON.stringify(errorWorkflow, null, 2)}\n`);
+console.log("Generated workflows/autoapplyops-intake.json and workflows/autoapplyops-error-handler.json");

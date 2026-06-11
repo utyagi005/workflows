@@ -6,10 +6,12 @@
   "scripts": {
     "test": "node --test",
     "validate": "node scripts/validate-workflow.mjs",
+    "simulate": "node scripts/simulate-samples.mjs",
+    "score": "node scripts/score-workflow.mjs",
     "serve": "npx http-server . -p 4173 -c-1",
     "screenshots": "node scripts/capture-demo.mjs",
     "demo:video": "node scripts/render-demo-video.mjs",
-    "verify": "npm run validate && npm test"
+    "verify": "npm run validate && npm test && npm run simulate && npm run score"
   },
   "keywords": [
     "n8n",

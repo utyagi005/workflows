@@ -11,6 +11,7 @@ AutoApplyOps is a portfolio workflow, so the default repository is safe to share
 - `sanitizeForLog` stores initials and email domain rather than full name or raw email.
 - Optional shared-secret checking can reject public webhook payloads before routing.
 - Duplicate `applicationId` values can route to a merge/discard review path rather than creating repeated follow-ups.
+- A dedicated error workflow sanitizes failure context before building an owner-alert payload.
 
 ## Production Hardening
 
@@ -27,3 +28,4 @@ AutoApplyOps is a portfolio workflow, so the default repository is safe to share
 - Confirm screenshots and videos use mock data only.
 - Confirm exported workflow JSON contains no credential IDs tied to a private n8n account.
 - Confirm test payloads are synthetic and safe to share.
+- Confirm the error-handler workflow is configured in n8n before production activation.

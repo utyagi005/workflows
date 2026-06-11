@@ -1,0 +1,14 @@
+{
+  "applicationId": "demo-001",
+  "applicantName": "Demo Applicant",
+  "email": "demo.applicant@example.com",
+  "company": "Northstar Robotics",
+  "role": "Software Engineering Intern",
+  "deadline": "2026-06-16",
+  "location": "Remote",
+  "skills": ["JavaScript", "automation"],
+  "source": "career-page",
+  "config": {
+    "knownApplicationIds": ["demo-001"]
+  }
+}

@@ -2,7 +2,9 @@ import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 
 const workflowPath = "workflows/autoapplyops-intake.json";
+const errorWorkflowPath = "workflows/autoapplyops-error-handler.json";
 const workflow = JSON.parse(readFileSync(workflowPath, "utf8"));
+const errorWorkflow = JSON.parse(readFileSync(errorWorkflowPath, "utf8"));
 
 assert.equal(workflow.name, "AutoApplyOps - Internship Application Triage");
 assert.ok(Array.isArray(workflow.nodes), "workflow.nodes must be an array");
@@ -29,3 +31,15 @@ for (const forbidden of ["sk-", "xoxb-", "ghp_", "Bearer ", "password"]) {
 }
 
 console.log(`Validated ${workflowPath}: ${workflow.nodes.length} nodes, no obvious secret markers.`);
+
+assert.ok(
+  errorWorkflow.nodes.some((node) => node.name === "Error Trigger"),
+  "error workflow must contain Error Trigger"
+);
+assert.ok(
+  errorWorkflow.nodes.some((node) => node.name === "Sanitize Error Context"),
+  "error workflow must sanitize error context"
+);
+assert.equal(errorWorkflow.active, false, "shared error workflow should import inactive by default");
+
+console.log(`Validated ${errorWorkflowPath}: ${errorWorkflow.nodes.length} nodes.`);
