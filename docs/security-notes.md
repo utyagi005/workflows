@@ -9,11 +9,13 @@ AutoApplyOps is a portfolio workflow, so the default repository is safe to share
 - `.gitignore` excludes `.env`, local n8n data, execution dumps, SQLite files, and credential exports.
 - `npm run validate` checks the workflow JSON for required nodes and common secret markers.
 - `sanitizeForLog` stores initials and email domain rather than full name or raw email.
+- Optional shared-secret checking can reject public webhook payloads before routing.
+- Duplicate `applicationId` values can route to a merge/discard review path rather than creating repeated follow-ups.
 
 ## Production Hardening
 
-- Add shared secret or HMAC validation before processing public webhook payloads.
-- Reject duplicate events with an idempotency key such as `applicationId`.
+- Replace the portfolio shared-secret check with HMAC signature validation before processing public webhook payloads.
+- Persist idempotency keys such as `applicationId` in n8n Data Tables, Redis, Postgres, Airtable, or Sheets.
 - Keep n8n credential values in n8n credential storage or environment variables.
 - Disable raw execution-data retention for sensitive workflows or set a short retention window.
 - Do not send full payloads to Slack, email, or logs.

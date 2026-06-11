@@ -65,6 +65,96 @@ test("invalid payloads return validation details instead of throwing", () => {
   assert.deepEqual(result.validationErrors.map((error) => error.field), ["role"]);
 });
 
+test("duplicate application IDs route to duplicate review without losing the report", () => {
+  const result = evaluateApplication(
+    {
+      applicationId: "demo-001",
+      applicantName: "Demo Applicant",
+      company: "Northstar Robotics",
+      role: "Software Engineering Intern",
+      deadline: "2026-06-16",
+      location: "Remote",
+      skills: ["JavaScript", "automation"],
+      source: "career-page"
+    },
+    { now: NOW, knownApplicationIds: ["demo-001"] }
+  );
+
+  assert.equal(result.validationStatus, "valid");
+  assert.equal(result.priority, "duplicate");
+  assert.equal(result.route, "Duplicate Review");
+  assert.ok(result.reasonCodes.includes("duplicate_detected"));
+  assert.equal(result.automationHints.nextStep, "merge_or_discard_duplicate");
+});
+
+test("optional shared-secret enforcement can reject public webhook payloads", () => {
+  const result = evaluateApplication(
+    {
+      applicationId: "demo-005",
+      applicantName: "Secure Demo",
+      company: "Webhook Safety Co",
+      role: "Automation Intern",
+      source: "career-page",
+      sharedSecret: "wrong-secret"
+    },
+    {
+      now: NOW,
+      requireSharedSecret: true,
+      expectedSharedSecret: "expected-secret"
+    }
+  );
+
+  assert.equal(result.validationStatus, "invalid");
+  assert.equal(result.priority, "invalid");
+  assert.ok(result.reasonCodes.includes("invalid_shared_secret"));
+});
+
+test("custom scoring weights make the workflow tunable", () => {
+  const defaultResult = evaluateApplication(
+    {
+      applicationId: "demo-006",
+      applicantName: "Tunable Demo",
+      company: "Configurable Systems",
+      role: "Operations Intern",
+      deadline: "2026-07-10",
+      location: "Hybrid",
+      skills: ["SQL", "automation", "API"],
+      source: "job-board"
+    },
+    { now: NOW }
+  );
+  const weightedResult = evaluateApplication(
+    {
+      applicationId: "demo-006",
+      applicantName: "Tunable Demo",
+      company: "Configurable Systems",
+      role: "Operations Intern",
+      deadline: "2026-07-10",
+      location: "Hybrid",
+      skills: ["SQL", "automation", "API"],
+      source: "job-board"
+    },
+    {
+      now: NOW,
+      weights: {
+        skills: 45,
+        role: 20,
+        deadline: 15,
+        location: 10,
+        completeness: 5,
+        source: 5
+      }
+    }
+  );
+
+  const defaultSkills = defaultResult.decisionMatrix.find((signal) => signal.name === "skills");
+  const weightedSkills = weightedResult.decisionMatrix.find((signal) => signal.name === "skills");
+
+  assert.ok(weightedSkills.points > defaultSkills.points);
+  assert.equal(weightedResult.scoringProfile.weights.skills, 45);
+  assert.ok(weightedResult.decisionMatrix.some((signal) => signal.name === "skills" && signal.maxPoints === 45));
+});
+
 test("sanitized logs remove raw email and full name", () => {
   const sanitized = sanitizeForLog({
     applicationId: "demo-004",

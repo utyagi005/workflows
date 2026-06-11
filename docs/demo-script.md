@@ -2,7 +2,7 @@
 
 ## Demo Goal
 
-Show how AutoApplyOps turns an incoming internship application lead into a validated, scored, routed, and documented follow-up workflow. The demo should make the automation easy to understand in under three minutes.
+Show how AutoApplyOps turns an incoming internship application lead into a validated, scored, routed, duplicate-aware, and documented follow-up workflow. The demo should make the automation easy to understand in under three minutes.
 
 ## Audience
 
@@ -18,7 +18,7 @@ Target length: 2 to 3 minutes.
 
 Show the n8n workflow canvas and introduce the project:
 
-> AutoApplyOps is an n8n automation for internship application triage. It receives application payloads through a webhook, validates the data, scores the opportunity, routes high-priority items, logs a sanitized report, and drafts follow-up messages.
+> AutoApplyOps is an n8n automation for internship application triage. It receives application payloads through a webhook, validates the data, applies configurable scoring, detects duplicate IDs, routes the next action, logs a sanitized report, and drafts follow-up messages.
 
 Keep the camera on the workflow canvas long enough for viewers to see the main stages.
 
@@ -50,7 +50,7 @@ Narration:
 
 ### 4. Scoring Step
 
-Show the scoring output for a high-priority sample.
+Show the scoring output for a high-priority sample, then adjust the skill weight slider in the local demo.
 
 Suggested visible fields:
 
@@ -59,12 +59,21 @@ Suggested visible fields:
 - `reasonCodes`
 - `deadlineUrgency`
 - `skillMatch`
+- `decisionMatrix`
 
 Narration:
 
-> The scoring step converts raw intake details into a transparent priority decision. The goal is not to hide the logic, but to make the triage decision easy to audit.
+> The scoring step converts raw intake details into a transparent priority decision. The decision matrix shows how each signal contributes, and the target skills and weights can be tuned without editing the workflow export.
 
-### 5. Routing Step
+### 5. Safety And Duplicate Checks
+
+Show the duplicate toggle and shared-secret failure toggle in the demo.
+
+Narration:
+
+> AutoApplyOps also demonstrates webhook reliability patterns. A repeated application ID routes to duplicate review, while optional shared-secret checking can reject unsafe public webhook payloads.
+
+### 6. Routing Step
 
 Show the branch or route for high-priority applications.
 
@@ -72,7 +81,7 @@ Narration:
 
 > High-priority applications move into a faster response path. Medium and low-priority records can still be logged for later review, so every lead gets a consistent outcome.
 
-### 6. Sanitized JSON Report
+### 7. Sanitized JSON Report
 
 Show the generated JSON report. Avoid showing real personal information.
 
@@ -85,13 +94,13 @@ Recommended fields to highlight:
 - `route`
 - `reasonCodes`
 - `sanitizedPayload`
-- `followUpStatus`
+- `automationHints`
 
 Narration:
 
 > The report is sanitized so the workflow keeps useful operational context without retaining unnecessary personal data.
 
-### 7. Follow-Up Message
+### 8. Follow-Up Message
 
 Show the generated follow-up message or draft output.
 
@@ -99,13 +108,13 @@ Narration:
 
 > AutoApplyOps also prepares follow-up copy, which reduces repetitive writing while keeping a human in control of the final send.
 
-### 8. Closing Shot
+### 9. Closing Shot
 
 Return to the full workflow canvas or a summary screen.
 
 Closing narration:
 
-> This project demonstrates webhook automation, validation, scoring, conditional routing, privacy-aware reporting, and follow-up generation in a single n8n workflow.
+> This project demonstrates webhook automation, validation, configurable scoring, duplicate handling, conditional routing, privacy-aware reporting, and follow-up generation in a single n8n workflow.
 
 ## Suggested Sample Payloads
 
@@ -135,7 +144,7 @@ Closing narration:
   "role": "Operations Intern",
   "deadline": "2026-07-10",
   "location": "Hybrid",
-  "skills": ["documentation", "spreadsheets"],
+  "skills": ["documentation", "spreadsheets", "SQL", "automation", "API"],
   "source": "job-board"
 }
 ```
@@ -156,6 +165,9 @@ Closing narration:
 - Webhook payload
 - Validation result
 - Score and priority output
+- Weight tuning and decision matrix
+- Duplicate review path
+- Shared-secret rejection path
 - High-priority routing branch
 - Sanitized JSON report
 - Follow-up message draft

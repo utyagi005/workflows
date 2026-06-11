@@ -17,6 +17,7 @@ for (const required of [
   "Hot Lead Action",
   "Review Queue Action",
   "Invalid Payload Action",
+  "Duplicate Review Action",
   "Respond with Triage Report"
 ]) {
   assert.ok(nodeNames.has(required), `missing node: ${required}`);

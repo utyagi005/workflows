@@ -47,6 +47,37 @@ curl -X POST "$N8N_WEBHOOK_URL" \
 | `review-application.json` | `valid` | `review` | `Review Queue` |
 | `invalid-application.json` | `invalid` | `invalid` | `Needs Manual Repair` |
 
+## Optional Runtime Config
+
+AutoApplyOps can accept a `config` object in the webhook payload:
+
+```json
+{
+  "config": {
+    "targetSkills": ["javascript", "api", "automation", "n8n"],
+    "weights": {
+      "deadline": 20,
+      "skills": 40,
+      "role": 20,
+      "location": 10,
+      "completeness": 5,
+      "source": 5
+    },
+    "knownApplicationIds": ["demo-001"],
+    "requireSharedSecret": true,
+    "expectedSharedSecret": "expected-secret"
+  }
+}
+```
+
+This lets reviewers test flexibility without editing the workflow JSON.
+
+## Extra Cases To Try
+
+- Duplicate path: send a payload with `config.knownApplicationIds` containing that payload's `applicationId`.
+- Shared-secret failure: set `config.requireSharedSecret` to `true` and send the wrong `sharedSecret`.
+- Weight tuning: increase `config.weights.skills` and inspect the `decisionMatrix`.
+
 ## Local Project Verification
 
 ```bash
@@ -56,4 +87,4 @@ npm run screenshots
 npm run demo:video
 ```
 
-The local demo does not replace n8n testing, but it proves the scoring logic, sample payloads, screenshots, and demo video can be recreated without private credentials.
+The local demo does not replace n8n testing, but it proves the scoring logic, sample payloads, screenshots, GIF preview, and demo video can be recreated without private credentials.

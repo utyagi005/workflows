@@ -1,8 +1,10 @@
 # AutoApplyOps: n8n Internship Application Triage
 
-AutoApplyOps is a portfolio-ready n8n workflow that turns an incoming internship application payload into a validated, scored, routed, and documented follow-up workflow.
+AutoApplyOps is a portfolio-ready n8n workflow that turns an incoming internship application payload into a validated, scored, routed, duplicate-aware, and documented follow-up workflow.
 
-![AutoApplyOps dashboard](docs/assets/demo-dashboard.png)
+![AutoApplyOps interactive demo](docs/assets/autoapplyops-demo.gif)
+
+<video src="docs/assets/autoapplyops-demo.mp4" controls width="100%"></video>
 
 ## Project Ideas Considered
 
@@ -19,15 +21,20 @@ The project shows:
 
 - Webhook intake and response handling.
 - Schema validation and graceful invalid-payload handling.
-- Transparent scoring logic.
-- Conditional routing for hot, review, low, and invalid applications.
+- Configurable scoring weights and target skills.
+- Conditional routing for hot, review, low, duplicate, and invalid applications.
+- Duplicate detection for idempotency-style webhook replays.
+- Optional shared-secret validation for safer public webhook use.
+- Decision matrix output that explains each score contribution.
+- Automation hints for the next action, SLA, notification channel, and retryability.
 - Privacy-aware sanitized reporting.
 - Ready-to-edit follow-up drafts.
-- Local tests, screenshot generation, and a short demo video.
+- Interactive local demo, screenshots, GIF preview, and MP4 demo video.
 
 ## Demo
 
 - [Demo video](docs/assets/autoapplyops-demo.mp4)
+- [Animated GIF preview](docs/assets/autoapplyops-demo.gif)
 - [Dashboard screenshot](docs/assets/demo-dashboard.png)
 - [Review queue screenshot](docs/assets/demo-review-queue.png)
 - [Invalid payload screenshot](docs/assets/demo-invalid-payload.png)
@@ -42,10 +49,12 @@ flowchart LR
   C -->|hot| D["High Priority Follow-up"]
   C -->|review| E["Review Queue"]
   C -->|invalid| F["Manual Repair"]
+  C -->|duplicate| H["Duplicate Review"]
   C -->|low| E
   D --> G["Respond with Triage Report"]
   E --> G
   F --> G
+  H --> G
 ```
 
 ## Repository Structure
@@ -70,7 +79,7 @@ npm run verify
 npm run serve
 ```
 
-Open `http://127.0.0.1:4173/demo/` and switch between the hot lead, review queue, and invalid payload examples.
+Open `http://127.0.0.1:4173/demo/` and use the builder to edit payload fields, tune scoring weights, change target skills, toggle duplicate detection, and test shared-secret enforcement.
 
 ## Import Into n8n
 
@@ -106,13 +115,38 @@ Expected result:
 - `priority`: `hot`
 - `route`: `High Priority Follow-up`
 - `followUpDraft`: generated message text
+- `decisionMatrix`: point-by-point scoring explanation
+- `automationHints`: next step, SLA, notification route, and retryability
 - `sanitizedPayload`: initials and email domain only, not raw personal data
+
+Optional runtime config can be sent with the payload:
+
+```json
+{
+  "config": {
+    "targetSkills": ["javascript", "api", "automation", "n8n"],
+    "weights": {
+      "deadline": 20,
+      "skills": 40,
+      "role": 20,
+      "location": 10,
+      "completeness": 5,
+      "source": 5
+    },
+    "knownApplicationIds": ["demo-001"],
+    "requireSharedSecret": true,
+    "expectedSharedSecret": "replace-in-production"
+  }
+}
+```
 
 ## Security Notes
 
 - The exported workflow contains no credentials.
 - The workflow is inactive by default.
 - Logs use sanitized payload fields.
+- Optional shared-secret checking is supported through payload config or `AUTOAPPLYOPS_WEBHOOK_SECRET`.
+- Duplicate IDs can route to `Duplicate Review` instead of creating repeated follow-ups.
 - Do not commit `.env`, n8n credential exports, raw webhook headers, execution dumps, or real applicant data.
 - For public production webhooks, add a shared secret or signature validation before accepting events.
 - n8n production webhook behavior depends on publishing/activation; see n8n docs on publishing workflows and webhook production URLs: [publish docs](https://docs.n8n.io/workflows/publish/) and [Webhook node docs](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.webhook/).
@@ -129,22 +163,22 @@ Verification covers:
 
 - Workflow JSON parses and contains required nodes.
 - Obvious secret markers are absent.
-- Hot lead, review queue, invalid payload, and sanitized logging tests pass.
-- Browser screenshots and MP4 demo render from the actual local dashboard.
+- Hot lead, review queue, duplicate, invalid secret, invalid payload, scoring-tuning, and sanitized logging tests pass.
+- Browser screenshots, GIF preview, and MP4 demo render from the actual local dashboard.
 
 ## Built With
 
 - n8n workflow JSON
 - Node.js 22 test runner
 - Playwright for screenshot capture
-- FFmpeg for the MP4 demo
+- FFmpeg for the MP4 and GIF demo
 
 ## Future Improvements
 
 - Add optional Google Sheets or Airtable append node.
 - Add Slack or email notification behind n8n credentials.
-- Add HMAC signature validation for public webhooks.
-- Store idempotency keys to reject duplicate application events.
+- Replace simple shared-secret checking with signed HMAC validation for public webhooks.
+- Store idempotency keys in Redis, Postgres, Airtable, or n8n Data Tables.
 - Add a daily digest sub-workflow for queued applications.
 
 GitHub recommends a README explain what the project does, why it is useful, and how people can use it. This repository follows that guidance from [GitHub Docs](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes).

@@ -1,185 +1,18 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
-const scoringCode = String.raw`
-const DEFAULT_TARGET_SKILLS = ["javascript", "typescript", "node", "api", "apis", "automation", "n8n", "postgresql", "python", "sql", "webhook", "react"];
-const REQUIRED_FIELDS = ["applicationId", "company", "role", "source"];
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const sharedScoringSource = readFileSync("src/scoring.mjs", "utf8").replaceAll("export function", "function");
+const scoringCode = `${sharedScoringSource}
 
-function clean(value) {
-  return typeof value === "string" ? value.trim() : value == null ? "" : String(value).trim();
-}
+const config = $json.config && typeof $json.config === "object" ? $json.config : {};
+const runtimeOptions = {
+  targetSkills: $json.targetSkills || config.targetSkills || DEFAULT_TARGET_SKILLS,
+  weights: $json.weights || config.weights || DEFAULT_WEIGHTS,
+  knownApplicationIds: $json.knownApplicationIds || config.knownApplicationIds || [],
+  requireSharedSecret: Boolean($json.requireSharedSecret || config.requireSharedSecret),
+  expectedSharedSecret: $json.expectedSharedSecret || config.expectedSharedSecret || $env.AUTOAPPLYOPS_WEBHOOK_SECRET || ""
+};
 
-function normalizeSkillList(skills) {
-  const list = Array.isArray(skills) ? skills : typeof skills === "string" ? skills.split(",") : [];
-  return [...new Set(list.map((skill) => clean(skill).toLowerCase()).filter(Boolean))];
-}
-
-function normalizePayload(payload = {}) {
-  const body = payload.body && typeof payload.body === "object" ? payload.body : payload;
-  return {
-    applicationId: clean(body.applicationId || body.id || body.leadId),
-    applicantName: clean(body.applicantName || body.name || "Demo Applicant"),
-    email: clean(body.email),
-    company: clean(body.company),
-    role: clean(body.role || body.title),
-    source: clean(body.source || "manual-entry"),
-    deadline: clean(body.deadline || body.applyBy),
-    location: clean(body.location || "Unknown"),
-    skills: normalizeSkillList(body.skills),
-    notes: clean(body.notes || body.resume_text || body.summary),
-    receivedAt: clean(body.receivedAt || body.received_at) || new Date().toISOString()
-  };
-}
-
-function validatePayload(normalized) {
-  const errors = [];
-  for (const field of REQUIRED_FIELDS) {
-    if (!normalized[field]) errors.push({ field, message: field + " is required" });
-  }
-  if (normalized.email && !EMAIL_RE.test(normalized.email)) {
-    errors.push({ field: "email", message: "email must be valid when provided" });
-  }
-  if (normalized.deadline && Number.isNaN(Date.parse(normalized.deadline))) {
-    errors.push({ field: "deadline", message: "deadline must be a valid date when provided" });
-  }
-  return { valid: errors.length === 0, errors };
-}
-
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value));
-}
-
-function scoreDeadline(deadline, now) {
-  if (!deadline) return { points: 8, reason: "deadline_missing_review", daysUntilDeadline: null };
-  const days = Math.ceil((new Date(deadline) - now) / 86400000);
-  if (days < 0) return { points: 0, reason: "deadline_expired", daysUntilDeadline: days };
-  if (days <= 7) return { points: 25, reason: "deadline_urgent", daysUntilDeadline: days };
-  if (days <= 21) return { points: 18, reason: "deadline_soon", daysUntilDeadline: days };
-  return { points: 12, reason: "deadline_open", daysUntilDeadline: days };
-}
-
-function scoreSkills(skills, targetSkills) {
-  const matches = skills.filter((skill) => targetSkills.includes(skill));
-  const ratio = targetSkills.length ? matches.length / Math.min(targetSkills.length, 6) : 0;
-  return { points: clamp(Math.round(ratio * 30), 0, 30), matches, reason: matches.length ? "skill_match_" + matches.length : "skill_match_none" };
-}
-
-function scoreRole(role) {
-  const value = role.toLowerCase();
-  if (value.includes("software") || value.includes("developer") || value.includes("automation")) return { points: 20, reason: "role_high_fit" };
-  if (value.includes("data") || value.includes("operations") || value.includes("analyst")) return { points: 14, reason: "role_medium_fit" };
-  return { points: 7, reason: "role_low_fit" };
-}
-
-function scoreLocation(location) {
-  const value = location.toLowerCase();
-  if (value.includes("remote")) return { points: 10, reason: "location_remote" };
-  if (value.includes("toronto") || value.includes("hybrid")) return { points: 7, reason: "location_workable" };
-  return { points: 4, reason: "location_needs_review" };
-}
-
-function scoreCompleteness(normalized) {
-  const present = ["email", "deadline", "location", "skills", "notes"].filter((field) => {
-    const value = normalized[field];
-    return Array.isArray(value) ? value.length > 0 : Boolean(value);
-  }).length;
-  return { points: present >= 4 ? 10 : present >= 2 ? 6 : 2, reason: "payload_complete_" + present };
-}
-
-function scoreSource(source) {
-  const value = source.toLowerCase();
-  if (value.includes("referral") || value.includes("career")) return { points: 5, reason: "source_high_signal" };
-  if (value.includes("linkedin") || value.includes("job")) return { points: 3, reason: "source_medium_signal" };
-  return { points: 1, reason: "source_manual_or_unknown" };
-}
-
-function initials(name) {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
-}
-
-function sanitizeForLog(normalized) {
-  return {
-    applicationId: normalized.applicationId,
-    applicant: normalized.applicantName ? initials(normalized.applicantName) : "unknown",
-    emailDomain: normalized.email && EMAIL_RE.test(normalized.email) ? normalized.email.split("@")[1] : null,
-    company: normalized.company,
-    role: normalized.role,
-    source: normalized.source,
-    deadline: normalized.deadline || null,
-    location: normalized.location,
-    skills: normalized.skills,
-    notesLength: normalized.notes ? normalized.notes.length : 0,
-    receivedAt: normalized.receivedAt
-  };
-}
-
-function humanList(items) {
-  if (items.length <= 1) return items.join("");
-  return items.slice(0, -1).join(", ") + " and " + items.at(-1);
-}
-
-function draftFollowUp(normalized, priority, matches) {
-  const greeting = normalized.applicantName ? "Hi " + normalized.applicantName.split(" ")[0] + "," : "Hi there,";
-  const matchText = matches.length
-    ? "Your background in " + humanList(matches) + " lines up well with this " + normalized.role + " opportunity."
-    : "Thanks for sharing your interest in the " + normalized.role + " opportunity.";
-  const ask = priority === "hot"
-    ? "Could you do a quick 15-minute review today or tomorrow so we can move before the deadline?"
-    : "I added this to the review queue and will follow up with next steps after the next batch review.";
-  return greeting + "\n\n" + matchText + "\n\n" + ask + "\n\nBest,\nAutoApplyOps";
-}
-
-const now = new Date();
-const normalized = normalizePayload($json);
-const validation = validatePayload(normalized);
-
-let result;
-if (!validation.valid) {
-  result = {
-    applicationId: normalized.applicationId || "unassigned",
-    validationStatus: "invalid",
-    validationErrors: validation.errors,
-    score: 0,
-    priority: "invalid",
-    route: "Needs Manual Repair",
-    reasonCodes: validation.errors.map((error) => "missing_or_invalid_" + error.field),
-    sanitizedPayload: sanitizeForLog(normalized),
-    followUpDraft: "Payload needs required fields before a follow-up can be drafted."
-  };
-} else {
-  const targetSkills = DEFAULT_TARGET_SKILLS;
-  const deadlineSignal = scoreDeadline(normalized.deadline, now);
-  const skillSignal = scoreSkills(normalized.skills, targetSkills);
-  const roleSignal = scoreRole(normalized.role);
-  const locationSignal = scoreLocation(normalized.location);
-  const completenessSignal = scoreCompleteness(normalized);
-  const sourceSignal = scoreSource(normalized.source);
-  const score = clamp(deadlineSignal.points + skillSignal.points + roleSignal.points + locationSignal.points + completenessSignal.points + sourceSignal.points, 0, 100);
-  const priority = score >= 80 ? "hot" : score >= 55 ? "review" : "low";
-  const route = priority === "hot" ? "High Priority Follow-up" : priority === "review" ? "Review Queue" : "Archive with Weekly Digest";
-  result = {
-    applicationId: normalized.applicationId,
-    validationStatus: "valid",
-    validationErrors: [],
-    score,
-    priority,
-    route,
-    reasonCodes: [deadlineSignal.reason, skillSignal.reason, roleSignal.reason, locationSignal.reason, completenessSignal.reason, sourceSignal.reason].filter(Boolean),
-    skillMatches: skillSignal.matches,
-    deadlineDays: deadlineSignal.daysUntilDeadline,
-    sanitizedPayload: sanitizeForLog(normalized),
-    followUpDraft: draftFollowUp(normalized, priority, skillSignal.matches)
-  };
-}
-
-result.auditTrail = [
-  { at: now.toISOString(), event: "webhook_received" },
-  { at: now.toISOString(), event: validation.valid ? "payload_validated" : "payload_rejected" },
-  { at: now.toISOString(), event: "candidate_scored_" + result.score },
-  { at: now.toISOString(), event: "route_" + result.route.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") }
-];
-
-return [{ json: result }];
+return [{ json: evaluateApplication($json, runtimeOptions) }];
 `.trim();
 
 const workflow = {
@@ -188,7 +21,7 @@ const workflow = {
     {
       parameters: {
         content:
-          "AutoApplyOps accepts a sanitized internship application payload, validates required fields, scores fit, routes priority, and returns a follow-up draft.",
+          "AutoApplyOps accepts a sanitized internship application payload, validates required fields, applies configurable scoring weights, detects duplicate IDs, routes priority, and returns a follow-up draft with automation hints.",
         height: 220,
         width: 340,
         color: 4
@@ -297,6 +130,29 @@ const workflow = {
               },
               renameOutput: true,
               outputKey: "Invalid"
+            },
+            {
+              conditions: {
+                options: {
+                  caseSensitive: true,
+                  leftValue: "",
+                  typeValidation: "strict",
+                  version: 2
+                },
+                conditions: [
+                  {
+                    leftValue: "={{ $json.priority }}",
+                    rightValue: "duplicate",
+                    operator: {
+                      type: "string",
+                      operation: "equals"
+                    }
+                  }
+                ],
+                combinator: "and"
+              },
+              renameOutput: true,
+              outputKey: "Duplicate"
             }
           ]
         },
@@ -343,6 +199,17 @@ const workflow = {
       type: "n8n-nodes-base.code",
       typeVersion: 2,
       position: [-20, 280]
+    },
+    {
+      parameters: {
+        jsCode:
+          "return items.map((item) => ({ json: { ...item.json, notificationChannel: 'duplicate-review', ownerAction: 'Merge duplicate record or discard replayed webhook event' } }));"
+      },
+      id: "6a2797c3-d1a9-481e-b415-b6a1ed2646de",
+      name: "Duplicate Review Action",
+      type: "n8n-nodes-base.code",
+      typeVersion: 2,
+      position: [-20, 470]
     },
     {
       parameters: {
@@ -407,6 +274,13 @@ const workflow = {
         ],
         [
           {
+            node: "Duplicate Review Action",
+            type: "main",
+            index: 0
+          }
+        ],
+        [
+          {
             node: "Review Queue Action",
             type: "main",
             index: 0
@@ -437,6 +311,17 @@ const workflow = {
       ]
     },
     "Invalid Payload Action": {
+      main: [
+        [
+          {
+            node: "Respond with Triage Report",
+            type: "main",
+            index: 0
+          }
+        ]
+      ]
+    },
+    "Duplicate Review Action": {
       main: [
         [
           {

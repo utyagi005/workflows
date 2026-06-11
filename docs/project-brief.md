@@ -2,7 +2,7 @@
 
 ## Overview
 
-AutoApplyOps is an n8n automation concept for internship application triage and follow-up. It accepts a webhook lead or application payload, validates the required fields, scores the opportunity, routes high-priority applications for faster action, logs a sanitized JSON report, and prepares follow-up messages for the applicant pipeline.
+AutoApplyOps is an n8n automation concept for internship application triage and follow-up. It accepts a webhook lead or application payload, validates the required fields, scores the opportunity with configurable weights, detects duplicate application IDs, routes applications for the right next action, logs a sanitized JSON report, and prepares follow-up messages for the applicant pipeline.
 
 The project is designed as a portfolio-ready workflow that demonstrates practical automation judgment: data hygiene, decision routing, privacy-aware logging, and human-readable outputs that support repeatable job-search operations.
 
@@ -17,9 +17,10 @@ AutoApplyOps addresses that operational gap by turning each incoming application
 1. Receive a lead or application through an n8n webhook.
 2. Validate that required fields are present and usable.
 3. Normalize and score the payload using defined internship-fit signals.
-4. Route high-priority items to the appropriate notification or action path.
-5. Log a sanitized JSON report that avoids unnecessary personal data exposure.
-6. Generate follow-up messages for next-step communication.
+4. Apply optional target-skill, weight, duplicate, and shared-secret configuration.
+5. Route high-priority, review, duplicate, low-priority, and invalid items to the appropriate path.
+6. Log a sanitized JSON report that avoids unnecessary personal data exposure.
+7. Generate follow-up messages and automation hints for next-step communication.
 
 ## Example Payload Fields
 
@@ -45,9 +46,11 @@ The scoring model should remain transparent enough for a reviewer to understand 
 - Keyword matches against target skills
 - Completeness and quality of the incoming payload
 
+The workflow returns a `decisionMatrix` so a reviewer can see each signal, point value, max point value, and reason code.
+
 ## Routing Logic
 
-High-priority applications should move into a fast-response path, such as a notification, task creation, or immediate follow-up draft. Medium-priority applications can be logged for scheduled review. Low-priority or invalid payloads should still produce a useful report explaining why they did not advance.
+High-priority applications should move into a fast-response path, such as a notification, task creation, or immediate follow-up draft. Medium-priority applications can be logged for scheduled review. Duplicate application IDs should route to a merge/discard review path. Low-priority or invalid payloads should still produce a useful report explaining why they did not advance.
 
 ## Privacy And Logging
 
@@ -66,6 +69,9 @@ AutoApplyOps demonstrates several skills that are valuable in automation and ope
 - Input validation and data normalization
 - Rule-based scoring
 - Conditional workflow routing
+- Runtime configuration and decision explainability
+- Duplicate/idempotency-aware webhook handling
+- Optional shared-secret validation
 - Privacy-aware reporting
 - Message generation for operational follow-up
 - Clear documentation for handoff and demo review
@@ -74,8 +80,11 @@ AutoApplyOps demonstrates several skills that are valuable in automation and ope
 
 - A valid payload produces a scored triage report.
 - A high-priority payload is routed to the fast-response path.
+- Duplicate IDs are routed to duplicate review.
+- Shared-secret failures are rejected with validation feedback.
 - An incomplete payload is handled gracefully with validation feedback.
 - The logged JSON report is sanitized and readable.
+- The decision matrix explains the score.
 - Follow-up messages are generated with clear next steps.
 - The demo can be understood by a reviewer without needing private credentials or production data.
 

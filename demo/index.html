@@ -20,6 +20,7 @@
         </div>
         <nav>
           <a class="active" href="#workflow">Workflow</a>
+          <a href="#builder">Builder</a>
           <a href="#payload">Payload</a>
           <a href="#report">Report</a>
           <a href="#followup">Follow-up</a>
@@ -45,6 +46,80 @@
             <button class="button primary" id="runDemo">Run Demo</button>
           </div>
         </header>
+
+        <section class="panel builder-panel" id="builder">
+          <div class="panel-heading">
+            <div>
+              <h2>Interactive Workflow Builder</h2>
+              <p>Change the payload, target profile, and safety checks to see how the n8n workflow responds.</p>
+            </div>
+            <button class="button secondary" id="resetDemo">Reset</button>
+          </div>
+          <form class="builder-grid" id="payloadForm">
+            <label>
+              Application ID
+              <input id="applicationIdInput" name="applicationId" />
+            </label>
+            <label>
+              Company
+              <input id="companyInput" name="company" />
+            </label>
+            <label>
+              Role
+              <input id="roleInput" name="role" />
+            </label>
+            <label>
+              Deadline
+              <input id="deadlineInput" name="deadline" type="date" />
+            </label>
+            <label>
+              Location
+              <select id="locationInput" name="location">
+                <option>Remote</option>
+                <option>Hybrid</option>
+                <option>Toronto</option>
+                <option>On-site</option>
+              </select>
+            </label>
+            <label>
+              Source
+              <select id="sourceInput" name="source">
+                <option value="career-page">career-page</option>
+                <option value="referral">referral</option>
+                <option value="job-board">job-board</option>
+                <option value="manual-entry">manual-entry</option>
+              </select>
+            </label>
+            <label class="wide">
+              Skills
+              <input id="skillsInput" name="skills" />
+            </label>
+            <label class="wide">
+              Notes
+              <input id="notesInput" name="notes" />
+            </label>
+          </form>
+          <div class="config-grid">
+            <label class="wide">
+              Target skills
+              <input id="targetSkillsInput" />
+            </label>
+            <label class="toggle-row">
+              <input id="duplicateToggle" type="checkbox" />
+              Treat this application ID as already seen
+            </label>
+            <label class="toggle-row">
+              <input id="secretToggle" type="checkbox" />
+              Require shared webhook secret
+            </label>
+            <div class="sliders" aria-label="Scoring weights">
+              <label>Deadline <input class="weight-input" data-weight="deadline" type="range" min="0" max="40" value="25" /></label>
+              <label>Skills <input class="weight-input" data-weight="skills" type="range" min="0" max="50" value="30" /></label>
+              <label>Role <input class="weight-input" data-weight="role" type="range" min="0" max="35" value="20" /></label>
+              <label>Source <input class="weight-input" data-weight="source" type="range" min="0" max="15" value="5" /></label>
+            </div>
+          </div>
+        </section>
 
         <section class="board" id="workflow">
           <div class="panel pipeline-panel">
@@ -94,8 +169,8 @@
                 <small>Current route</small>
               </article>
               <article>
-                <span>2.4m</span>
-                <small>Avg. time saved</small>
+                <span id="slaMetric">24h</span>
+                <small>Suggested SLA</small>
               </article>
             </div>
 
@@ -136,8 +211,17 @@
                 <div><dt>Score</dt><dd id="scoreValue">87/100</dd></div>
                 <div><dt>Status</dt><dd id="statusValue">valid</dd></div>
                 <div><dt>Route</dt><dd id="routeValue">High Priority Follow-up</dd></div>
+                <div><dt>Next step</dt><dd id="nextStepValue">send follow-up</dd></div>
                 <div><dt>Signals</dt><dd id="reasonValue">deadline_urgent, skill_match_4</dd></div>
               </dl>
+            </section>
+
+            <section class="panel matrix-panel">
+              <div class="panel-heading">
+                <h2>Decision Matrix</h2>
+                <span id="weightTotal">100 pts</span>
+              </div>
+              <div id="decisionMatrix" class="matrix-list"></div>
             </section>
 
             <section class="panel followup-panel" id="followup">

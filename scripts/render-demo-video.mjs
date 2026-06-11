@@ -6,6 +6,7 @@ const PORT = 4174;
 const BASE_URL = `http://127.0.0.1:${PORT}/demo/`;
 const FRAME_DIR = "demo/frames";
 const VIDEO_PATH = "docs/assets/autoapplyops-demo.mp4";
+const GIF_PATH = "docs/assets/autoapplyops-demo.gif";
 
 mkdirSync(FRAME_DIR, { recursive: true });
 mkdirSync("docs/assets", { recursive: true });
@@ -22,41 +23,74 @@ try {
   const shots = [
     {
       file: `${FRAME_DIR}/01-hot-lead.png`,
-      payload: "high-priority-application.json",
-      caption: "Webhook intake produces a hot-lead triage report."
+      action: async () => {
+        await page.selectOption("#payloadSelect", "high-priority-application.json");
+      },
+      label: "1. Webhook intake",
+      caption: "A valid internship payload becomes a hot lead with score, route, and draft."
     },
     {
-      file: `${FRAME_DIR}/02-review-queue.png`,
-      payload: "review-application.json",
-      caption: "Medium-fit records go to a review queue."
+      file: `${FRAME_DIR}/02-weight-tuning.png`,
+      action: async () => {
+        await page.locator('[data-weight="skills"]').evaluate((input) => {
+          input.value = "45";
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+        });
+      },
+      label: "2. Tune scoring",
+      caption: "Users can raise skill weight and instantly see the decision matrix change."
     },
     {
-      file: `${FRAME_DIR}/03-invalid.png`,
-      payload: "invalid-application.json",
-      caption: "Invalid payloads return clear repair instructions."
+      file: `${FRAME_DIR}/03-duplicate-review.png`,
+      action: async () => {
+        await page.locator("#duplicateToggle").check();
+      },
+      label: "3. Duplicate guard",
+      caption: "A repeated application ID routes to Duplicate Review instead of creating another follow-up."
     },
     {
-      file: `${FRAME_DIR}/04-workflow-json.png`,
-      payload: "high-priority-application.json",
-      caption: "The exported n8n JSON is credential-free and importable."
+      file: `${FRAME_DIR}/04-secret-fail.png`,
+      action: async () => {
+        await page.locator("#duplicateToggle").uncheck();
+        await page.locator("#secretToggle").check();
+      },
+      label: "4. Webhook safety",
+      caption: "Optional shared-secret enforcement rejects unsafe public webhook payloads."
+    },
+    {
+      file: `${FRAME_DIR}/05-review-queue.png`,
+      action: async () => {
+        await page.locator("#secretToggle").uncheck();
+        await page.selectOption("#payloadSelect", "review-application.json");
+      },
+      label: "5. Review queue",
+      caption: "Medium-fit applications stay organized for batch review."
+    },
+    {
+      file: `${FRAME_DIR}/06-invalid.png`,
+      action: async () => {
+        await page.selectOption("#payloadSelect", "invalid-application.json");
+      },
+      label: "6. Repair path",
+      caption: "Incomplete submissions return clear validation errors and repair instructions."
     }
   ];
 
   for (const shot of shots) {
     await page.goto(BASE_URL, { waitUntil: "networkidle" });
-    await page.selectOption("#payloadSelect", shot.payload);
-    await page.waitForTimeout(400);
-    await page.evaluate((caption) => {
+    await shot.action();
+    await page.waitForTimeout(350);
+    await page.evaluate(({ label, caption }) => {
       let banner = document.querySelector(".recording-banner");
       if (!banner) {
         banner = document.createElement("div");
         banner.className = "recording-banner";
         banner.style.cssText =
-          "position:fixed;left:30px;right:30px;bottom:24px;z-index:20;padding:16px 20px;border-radius:8px;background:#005f58;color:white;font:800 22px Inter,system-ui,sans-serif;box-shadow:0 18px 60px rgba(0,0,0,.18)";
+          "position:fixed;left:30px;right:30px;bottom:24px;z-index:20;display:flex;gap:18px;align-items:center;padding:18px 22px;border-radius:8px;background:#005f58;color:white;box-shadow:0 18px 60px rgba(0,0,0,.18);font-family:Inter,system-ui,sans-serif";
         document.body.append(banner);
       }
-      banner.textContent = caption;
-    }, shot.caption);
+      banner.innerHTML = `<strong style="font-size:24px;white-space:nowrap">${label}</strong><span style="font-size:20px;font-weight:800;line-height:1.25">${caption}</span>`;
+    }, { label: shot.label, caption: shot.caption });
     await page.screenshot({ path: shot.file, fullPage: false });
   }
 
@@ -94,7 +128,24 @@ try {
     throw new Error(`ffmpeg failed with status ${ffmpeg.status}`);
   }
 
-  console.log(`Rendered ${VIDEO_PATH}`);
+  const gif = spawnSync(
+    "ffmpeg",
+    [
+      "-y",
+      "-i",
+      VIDEO_PATH,
+      "-vf",
+      "fps=6,scale=900:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=96[p];[s1][p]paletteuse=dither=bayer:bayer_scale=3",
+      GIF_PATH
+    ],
+    { stdio: "inherit" }
+  );
+
+  if (gif.status !== 0) {
+    throw new Error(`ffmpeg gif render failed with status ${gif.status}`);
+  }
+
+  console.log(`Rendered ${VIDEO_PATH} and ${GIF_PATH}`);
 } finally {
   server.kill("SIGTERM");
 }
