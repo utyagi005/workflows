@@ -1,0 +1,22 @@
+.DS_Store
+node_modules/
+.env
+.env.*
+!.env.example
+
+# n8n local/runtime data
+.n8n/
+n8n-data/
+execution-data/
+credentials*.json
+*.sqlite
+
+# Logs and local recordings
+*.log
+npm-debug.log*
+playwright-report/
+test-results/
+demo/frames/
+
+# Keep committed demo outputs, but avoid accidental raw captures.
+docs/assets/raw/

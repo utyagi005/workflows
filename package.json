@@ -1,0 +1,27 @@
+{
+  "name": "autoapplyops-n8n-workflow",
+  "version": "1.0.0",
+  "description": "Portfolio-ready n8n workflow for internship application triage, routing, sanitized reporting, and follow-up drafts.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "validate": "node scripts/validate-workflow.mjs",
+    "serve": "npx http-server . -p 4173 -c-1",
+    "screenshots": "node scripts/capture-demo.mjs",
+    "demo:video": "node scripts/render-demo-video.mjs",
+    "verify": "npm run validate && npm test"
+  },
+  "keywords": [
+    "n8n",
+    "workflow-automation",
+    "webhook",
+    "internship",
+    "portfolio"
+  ],
+  "author": "Sandeeptyagi",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "http-server": "^14.1.1"
+  }
+}

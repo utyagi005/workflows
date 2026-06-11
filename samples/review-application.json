@@ -1,0 +1,12 @@
+{
+  "applicationId": "demo-002",
+  "applicantName": "Casey Review",
+  "email": "casey.review@example.com",
+  "company": "Civic Data Lab",
+  "role": "Operations Intern",
+  "deadline": "2026-07-10",
+  "location": "Hybrid",
+  "skills": ["documentation", "spreadsheets", "SQL", "automation", "API"],
+  "source": "job-board",
+  "notes": "Good operations role, but fewer technical automation signals."
+}

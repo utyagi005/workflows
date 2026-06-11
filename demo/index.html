@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AutoApplyOps Demo</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar" aria-label="Demo navigation">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+          <div>
+            <strong>AutoApplyOps</strong>
+            <small>n8n workflow demo</small>
+          </div>
+        </div>
+        <nav>
+          <a class="active" href="#workflow">Workflow</a>
+          <a href="#payload">Payload</a>
+          <a href="#report">Report</a>
+          <a href="#followup">Follow-up</a>
+        </nav>
+        <div class="owner">
+          <div class="avatar">AO</div>
+          <div>
+            <strong>Portfolio Build</strong>
+            <small>Importable JSON</small>
+          </div>
+        </div>
+      </aside>
+
+      <main>
+        <header class="topbar">
+          <div>
+            <h1>AutoApplyOps Dashboard</h1>
+            <p>Internship application intake, scoring, routing, and follow-up in one n8n workflow.</p>
+          </div>
+          <div class="actions">
+            <span class="status-dot">Active demo</span>
+            <a class="button secondary" href="../workflows/autoapplyops-intake.json">Workflow JSON</a>
+            <button class="button primary" id="runDemo">Run Demo</button>
+          </div>
+        </header>
+
+        <section class="board" id="workflow">
+          <div class="panel pipeline-panel">
+            <div class="panel-heading">
+              <h2>Workflow Pipeline</h2>
+              <span id="lastRun">Ready</span>
+            </div>
+            <div class="pipeline" aria-label="Workflow stages">
+              <article class="stage complete">
+                <div class="stage-icon">⌁</div>
+                <strong>Webhook</strong>
+                <small>Intake</small>
+              </article>
+              <article class="stage complete">
+                <div class="stage-icon">□</div>
+                <strong>Validate</strong>
+                <small>Schema</small>
+              </article>
+              <article class="stage active">
+                <div class="stage-icon">☆</div>
+                <strong>Score</strong>
+                <small>Fit</small>
+              </article>
+              <article class="stage complete">
+                <div class="stage-icon">⌯</div>
+                <strong>Route</strong>
+                <small>Priority</small>
+              </article>
+              <article class="stage complete">
+                <div class="stage-icon">↗</div>
+                <strong>Respond</strong>
+                <small>Draft</small>
+              </article>
+            </div>
+
+            <div class="metrics" aria-label="Workflow metrics">
+              <article>
+                <span>128</span>
+                <small>Mock intakes</small>
+              </article>
+              <article>
+                <span id="scoreMetric">87</span>
+                <small>Current score</small>
+              </article>
+              <article>
+                <span id="routeMetric">Hot</span>
+                <small>Current route</small>
+              </article>
+              <article>
+                <span>2.4m</span>
+                <small>Avg. time saved</small>
+              </article>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Application</th>
+                    <th>Company</th>
+                    <th>Priority</th>
+                    <th>Route</th>
+                  </tr>
+                </thead>
+                <tbody id="executionRows"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <aside class="right-rail">
+            <section class="panel" id="payload">
+              <div class="panel-heading">
+                <h2>Demo Payload</h2>
+                <select id="payloadSelect" aria-label="Select sample payload">
+                  <option value="high-priority-application.json">Hot lead</option>
+                  <option value="review-application.json">Review queue</option>
+                  <option value="invalid-application.json">Invalid</option>
+                </select>
+              </div>
+              <pre id="payloadView"></pre>
+            </section>
+
+            <section class="panel result-panel" id="report">
+              <div class="panel-heading">
+                <h2>Triage Report</h2>
+                <span class="pill" id="priorityPill">Hot lead</span>
+              </div>
+              <dl>
+                <div><dt>Score</dt><dd id="scoreValue">87/100</dd></div>
+                <div><dt>Status</dt><dd id="statusValue">valid</dd></div>
+                <div><dt>Route</dt><dd id="routeValue">High Priority Follow-up</dd></div>
+                <div><dt>Signals</dt><dd id="reasonValue">deadline_urgent, skill_match_4</dd></div>
+              </dl>
+            </section>
+
+            <section class="panel followup-panel" id="followup">
+              <div class="panel-heading">
+                <h2>Follow-up Draft</h2>
+                <span>Sanitized</span>
+              </div>
+              <pre id="followUpView"></pre>
+            </section>
+          </aside>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,305 @@
+{
+  "name": "AutoApplyOps - Internship Application Triage",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "AutoApplyOps accepts a sanitized internship application payload, validates required fields, scores fit, routes priority, and returns a follow-up draft.",
+        "height": 220,
+        "width": 340,
+        "color": 4
+      },
+      "id": "f5c71f76-7bb9-4867-8d4c-08a3dc2ad1e9",
+      "name": "Workflow Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1120,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "autoapplyops/intake",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "6a7c8ad2-40e8-43cb-8c02-8ecb9a3180bb",
+      "name": "Webhook Intake",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -900,
+        80
+      ],
+      "webhookId": "autoapplyops-intake"
+    },
+    {
+      "parameters": {
+        "jsCode": "const DEFAULT_TARGET_SKILLS = [\"javascript\", \"typescript\", \"node\", \"api\", \"apis\", \"automation\", \"n8n\", \"postgresql\", \"python\", \"sql\", \"webhook\", \"react\"];\nconst REQUIRED_FIELDS = [\"applicationId\", \"company\", \"role\", \"source\"];\nconst EMAIL_RE = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\n\nfunction clean(value) {\n  return typeof value === \"string\" ? value.trim() : value == null ? \"\" : String(value).trim();\n}\n\nfunction normalizeSkillList(skills) {\n  const list = Array.isArray(skills) ? skills : typeof skills === \"string\" ? skills.split(\",\") : [];\n  return [...new Set(list.map((skill) => clean(skill).toLowerCase()).filter(Boolean))];\n}\n\nfunction normalizePayload(payload = {}) {\n  const body = payload.body && typeof payload.body === \"object\" ? payload.body : payload;\n  return {\n    applicationId: clean(body.applicationId || body.id || body.leadId),\n    applicantName: clean(body.applicantName || body.name || \"Demo Applicant\"),\n    email: clean(body.email),\n    company: clean(body.company),\n    role: clean(body.role || body.title),\n    source: clean(body.source || \"manual-entry\"),\n    deadline: clean(body.deadline || body.applyBy),\n    location: clean(body.location || \"Unknown\"),\n    skills: normalizeSkillList(body.skills),\n    notes: clean(body.notes || body.resume_text || body.summary),\n    receivedAt: clean(body.receivedAt || body.received_at) || new Date().toISOString()\n  };\n}\n\nfunction validatePayload(normalized) {\n  const errors = [];\n  for (const field of REQUIRED_FIELDS) {\n    if (!normalized[field]) errors.push({ field, message: field + \" is required\" });\n  }\n  if (normalized.email && !EMAIL_RE.test(normalized.email)) {\n    errors.push({ field: \"email\", message: \"email must be valid when provided\" });\n  }\n  if (normalized.deadline && Number.isNaN(Date.parse(normalized.deadline))) {\n    errors.push({ field: \"deadline\", message: \"deadline must be a valid date when provided\" });\n  }\n  return { valid: errors.length === 0, errors };\n}\n\nfunction clamp(value, min, max) {\n  return Math.min(max, Math.max(min, value));\n}\n\nfunction scoreDeadline(deadline, now) {\n  if (!deadline) return { points: 8, reason: \"deadline_missing_review\", daysUntilDeadline: null };\n  const days = Math.ceil((new Date(deadline) - now) / 86400000);\n  if (days < 0) return { points: 0, reason: \"deadline_expired\", daysUntilDeadline: days };\n  if (days <= 7) return { points: 25, reason: \"deadline_urgent\", daysUntilDeadline: days };\n  if (days <= 21) return { points: 18, reason: \"deadline_soon\", daysUntilDeadline: days };\n  return { points: 12, reason: \"deadline_open\", daysUntilDeadline: days };\n}\n\nfunction scoreSkills(skills, targetSkills) {\n  const matches = skills.filter((skill) => targetSkills.includes(skill));\n  const ratio = targetSkills.length ? matches.length / Math.min(targetSkills.length, 6) : 0;\n  return { points: clamp(Math.round(ratio * 30), 0, 30), matches, reason: matches.length ? \"skill_match_\" + matches.length : \"skill_match_none\" };\n}\n\nfunction scoreRole(role) {\n  const value = role.toLowerCase();\n  if (value.includes(\"software\") || value.includes(\"developer\") || value.includes(\"automation\")) return { points: 20, reason: \"role_high_fit\" };\n  if (value.includes(\"data\") || value.includes(\"operations\") || value.includes(\"analyst\")) return { points: 14, reason: \"role_medium_fit\" };\n  return { points: 7, reason: \"role_low_fit\" };\n}\n\nfunction scoreLocation(location) {\n  const value = location.toLowerCase();\n  if (value.includes(\"remote\")) return { points: 10, reason: \"location_remote\" };\n  if (value.includes(\"toronto\") || value.includes(\"hybrid\")) return { points: 7, reason: \"location_workable\" };\n  return { points: 4, reason: \"location_needs_review\" };\n}\n\nfunction scoreCompleteness(normalized) {\n  const present = [\"email\", \"deadline\", \"location\", \"skills\", \"notes\"].filter((field) => {\n    const value = normalized[field];\n    return Array.isArray(value) ? value.length > 0 : Boolean(value);\n  }).length;\n  return { points: present >= 4 ? 10 : present >= 2 ? 6 : 2, reason: \"payload_complete_\" + present };\n}\n\nfunction scoreSource(source) {\n  const value = source.toLowerCase();\n  if (value.includes(\"referral\") || value.includes(\"career\")) return { points: 5, reason: \"source_high_signal\" };\n  if (value.includes(\"linkedin\") || value.includes(\"job\")) return { points: 3, reason: \"source_medium_signal\" };\n  return { points: 1, reason: \"source_manual_or_unknown\" };\n}\n\nfunction initials(name) {\n  return name.split(/\\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join(\"\");\n}\n\nfunction sanitizeForLog(normalized) {\n  return {\n    applicationId: normalized.applicationId,\n    applicant: normalized.applicantName ? initials(normalized.applicantName) : \"unknown\",\n    emailDomain: normalized.email && EMAIL_RE.test(normalized.email) ? normalized.email.split(\"@\")[1] : null,\n    company: normalized.company,\n    role: normalized.role,\n    source: normalized.source,\n    deadline: normalized.deadline || null,\n    location: normalized.location,\n    skills: normalized.skills,\n    notesLength: normalized.notes ? normalized.notes.length : 0,\n    receivedAt: normalized.receivedAt\n  };\n}\n\nfunction humanList(items) {\n  if (items.length <= 1) return items.join(\"\");\n  return items.slice(0, -1).join(\", \") + \" and \" + items.at(-1);\n}\n\nfunction draftFollowUp(normalized, priority, matches) {\n  const greeting = normalized.applicantName ? \"Hi \" + normalized.applicantName.split(\" \")[0] + \",\" : \"Hi there,\";\n  const matchText = matches.length\n    ? \"Your background in \" + humanList(matches) + \" lines up well with this \" + normalized.role + \" opportunity.\"\n    : \"Thanks for sharing your interest in the \" + normalized.role + \" opportunity.\";\n  const ask = priority === \"hot\"\n    ? \"Could you do a quick 15-minute review today or tomorrow so we can move before the deadline?\"\n    : \"I added this to the review queue and will follow up with next steps after the next batch review.\";\n  return greeting + \"\\n\\n\" + matchText + \"\\n\\n\" + ask + \"\\n\\nBest,\\nAutoApplyOps\";\n}\n\nconst now = new Date();\nconst normalized = normalizePayload($json);\nconst validation = validatePayload(normalized);\n\nlet result;\nif (!validation.valid) {\n  result = {\n    applicationId: normalized.applicationId || \"unassigned\",\n    validationStatus: \"invalid\",\n    validationErrors: validation.errors,\n    score: 0,\n    priority: \"invalid\",\n    route: \"Needs Manual Repair\",\n    reasonCodes: validation.errors.map((error) => \"missing_or_invalid_\" + error.field),\n    sanitizedPayload: sanitizeForLog(normalized),\n    followUpDraft: \"Payload needs required fields before a follow-up can be drafted.\"\n  };\n} else {\n  const targetSkills = DEFAULT_TARGET_SKILLS;\n  const deadlineSignal = scoreDeadline(normalized.deadline, now);\n  const skillSignal = scoreSkills(normalized.skills, targetSkills);\n  const roleSignal = scoreRole(normalized.role);\n  const locationSignal = scoreLocation(normalized.location);\n  const completenessSignal = scoreCompleteness(normalized);\n  const sourceSignal = scoreSource(normalized.source);\n  const score = clamp(deadlineSignal.points + skillSignal.points + roleSignal.points + locationSignal.points + completenessSignal.points + sourceSignal.points, 0, 100);\n  const priority = score >= 80 ? \"hot\" : score >= 55 ? \"review\" : \"low\";\n  const route = priority === \"hot\" ? \"High Priority Follow-up\" : priority === \"review\" ? \"Review Queue\" : \"Archive with Weekly Digest\";\n  result = {\n    applicationId: normalized.applicationId,\n    validationStatus: \"valid\",\n    validationErrors: [],\n    score,\n    priority,\n    route,\n    reasonCodes: [deadlineSignal.reason, skillSignal.reason, roleSignal.reason, locationSignal.reason, completenessSignal.reason, sourceSignal.reason].filter(Boolean),\n    skillMatches: skillSignal.matches,\n    deadlineDays: deadlineSignal.daysUntilDeadline,\n    sanitizedPayload: sanitizeForLog(normalized),\n    followUpDraft: draftFollowUp(normalized, priority, skillSignal.matches)\n  };\n}\n\nresult.auditTrail = [\n  { at: now.toISOString(), event: \"webhook_received\" },\n  { at: now.toISOString(), event: validation.valid ? \"payload_validated\" : \"payload_rejected\" },\n  { at: now.toISOString(), event: \"candidate_scored_\" + result.score },\n  { at: now.toISOString(), event: \"route_\" + result.route.toLowerCase().replace(/[^a-z0-9]+/g, \"_\").replace(/^_|_$/g, \"\") }\n];\n\nreturn [{ json: result }];"
+      },
+      "id": "412dd6f5-9c40-4b52-8ebf-7e5a4e032ef7",
+      "name": "Validate + Score Application",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -620,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.priority }}",
+                    "rightValue": "hot",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Hot Lead"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.priority }}",
+                    "rightValue": "review",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Review Queue"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.priority }}",
+                    "rightValue": "invalid",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Invalid"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Low Priority"
+        }
+      },
+      "id": "d3bec2cd-9c6f-4e58-a0c5-619e04cb6bf9",
+      "name": "Route Priority",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -330,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map((item) => ({ json: { ...item.json, notificationChannel: 'fast-response', ownerAction: 'Review today and send follow-up draft' } }));"
+      },
+      "id": "69e12fab-e110-4c1a-91dc-d2e0c165d642",
+      "name": "Hot Lead Action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -20,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map((item) => ({ json: { ...item.json, notificationChannel: 'batch-review', ownerAction: 'Review during the next application batch' } }));"
+      },
+      "id": "6829d2d5-cd7a-4835-bd7e-927ef195e0cc",
+      "name": "Review Queue Action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -20,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map((item) => ({ json: { ...item.json, notificationChannel: 'manual-repair', ownerAction: 'Fix required fields and replay payload' } }));"
+      },
+      "id": "0ebd0d5e-1d9a-4b12-858d-23ac7121b388",
+      "name": "Invalid Payload Action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -20,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": "={{ $json.validationStatus === 'invalid' ? 422 : 200 }}"
+        }
+      },
+      "id": "5dfdb7cc-3501-4be6-ad09-22fccf14cb6c",
+      "name": "Respond with Triage Report",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        290,
+        80
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Intake": {
+      "main": [
+        [
+          {
+            "node": "Validate + Score Application",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate + Score Application": {
+      "main": [
+        [
+          {
+            "node": "Route Priority",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Priority": {
+      "main": [
+        [
+          {
+            "node": "Hot Lead Action",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Review Queue Action",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Invalid Payload Action",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Review Queue Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hot Lead Action": {
+      "main": [
+        [
+          {
+            "node": "Respond with Triage Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review Queue Action": {
+      "main": [
+        [
+          {
+            "node": "Respond with Triage Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invalid Payload Action": {
+      "main": [
+        [
+          {
+            "node": "Respond with Triage Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "versionId": "autoapplyops-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "portfolio-demo"
+  },
+  "tags": [
+    {
+      "name": "portfolio"
+    },
+    {
+      "name": "internship"
+    }
+  ]
+}

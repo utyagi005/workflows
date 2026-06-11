@@ -1,0 +1,12 @@
+{
+  "applicationId": "demo-001",
+  "applicantName": "Demo Applicant",
+  "email": "demo.applicant@example.com",
+  "company": "Northstar Robotics",
+  "role": "Software Engineering Intern",
+  "deadline": "2026-06-16",
+  "location": "Remote",
+  "skills": ["JavaScript", "APIs", "automation", "PostgreSQL"],
+  "source": "career-page",
+  "notes": "Strong match for automation and backend workflow experience."
+}

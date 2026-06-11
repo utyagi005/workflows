@@ -1,0 +1,4 @@
+applicationId,applicantName,email,company,role,deadline,location,skills,source,expectedPriority
+demo-001,Demo Applicant,demo.applicant@example.com,Northstar Robotics,Software Engineering Intern,2026-06-16,Remote,"JavaScript;APIs;automation;PostgreSQL",career-page,hot
+demo-002,Casey Review,casey.review@example.com,Civic Data Lab,Operations Intern,2026-07-10,Hybrid,"documentation;spreadsheets;SQL;automation;API",job-board,review
+demo-003,,,Missing Fields Inc.,,,,"",manual-entry,invalid
