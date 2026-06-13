@@ -1,0 +1,12 @@
+{
+  "applicationId": "human-review-001",
+  "applicantName": "Riley Morgan",
+  "email": "riley.morgan@example.com",
+  "company": "SignalBridge",
+  "role": "Data Operations Intern",
+  "deadline": "2026-07-14",
+  "location": "Hybrid",
+  "skills": ["SQL", "automation", "API"],
+  "source": "linkedin",
+  "notes": "Resume has enough signal for review, but the role scope mixes operations, analytics, and backend ownership."
+}

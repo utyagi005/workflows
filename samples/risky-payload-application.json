@@ -1,0 +1,13 @@
+{
+  "applicationId": "risky-payload-001",
+  "applicantName": "Taylor Risk",
+  "email": "taylor.risk@example.com",
+  "company": "Northstar Robotics",
+  "role": "Software Engineering Intern",
+  "deadline": "2026-06-16",
+  "location": "Remote",
+  "skills": ["JavaScript", "APIs", "automation", "PostgreSQL"],
+  "source": "career-page",
+  "notes": "",
+  "salaryExpectation": "Compensation mismatch: below stated minimum range."
+}

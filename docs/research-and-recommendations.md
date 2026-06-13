@@ -9,8 +9,14 @@
 - n8n Error handling documentation: https://docs.n8n.io/flow-logic/error-handling/
 - n8n Error Trigger documentation: https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.errortrigger/
 - n8n Respond to Webhook documentation: https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.respondtowebhook/
+- n8n HTTP Request node documentation: https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.httprequest/
+- n8n Wait node documentation: https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.wait/
+- n8n Ollama Model node documentation: https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.lmollama/
 - n8n retry/rate-limit guidance: https://docs.n8n.io/integrations/builtin/rate-limits/
 - n8n memory guidance warning to avoid oversized Code-node processing: https://docs.n8n.io/hosting/scaling/memory-errors/
+- Ollama structured outputs documentation: https://docs.ollama.com/capabilities/structured-outputs
+- Ollama Generate API documentation: https://docs.ollama.com/api/generate
+- better-sqlite3 npm package: https://www.npmjs.com/package/better-sqlite3
 
 ## Recommendations Implemented
 
@@ -25,6 +31,11 @@
 | Explain every decision | Recruiters and reviewers need to audit automation logic. | `decisionMatrix`, `reasonCodes`, `automationHints`. |
 | Add idempotency pattern | Webhooks can replay; duplicate handling prevents repeated follow-ups. | `knownApplicationIds` and `Duplicate Review` route. |
 | Add repeatable evidence | A strong portfolio repo should prove behavior without private accounts. | `npm run verify`, simulation report, screenshots, GIF, MP4. |
+| Use local AI without credentials | Ollama can be called locally and the Generate API supports JSON output. | `lib/ai-evaluator.mjs`, `workflows/autoapplyops-ai-copilot.json`. |
+| Use n8n HTTP Request for local Ollama | The HTTP Request node is credential-safe for a local REST API call. | AI Copilot workflow calls `/api/generate` without credential nodes. |
+| Use Wait-node human review | n8n Wait can resume execution from a generated webhook URL. | Human Review node documents the resume-webhook pattern. |
+| Persist feedback locally but degrade safely | `better-sqlite3` is fast and simple, but native addons can fail without build tools. | `lib/feedback-store.mjs` uses stub mode if SQLite is unavailable. |
+| Export model-ready evidence | ML should wait for labels, but the feature vector should be ready now. | `exportForTraining()` writes `data/training-export.json`. |
 
 ## Remaining Production Recommendations
 
@@ -33,3 +44,4 @@
 - Replace action-stub Code nodes with real Slack, email, task, or database nodes once credentials are available.
 - Split very large future logic into sub-workflows or data nodes instead of growing a single Code node indefinitely.
 - Add node-level retry settings on outbound HTTP/API nodes when real integrations are connected.
+- When enough labeled records exist, train an interpretable baseline model outside the n8n workflow and compare it against the current rules + Ollama baseline using calibration, not only raw accuracy.

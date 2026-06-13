@@ -462,7 +462,309 @@ return items.map((item) => {
   ]
 };
 
+const mainWorkflow = {
+  ...workflow,
+  name: "AutoApplyOps - Main Deterministic Triage",
+  versionId: "autoapplyops-main-v1",
+  nodes: [
+    {
+      parameters: {
+        content:
+          "// Intentional duplication — autoapplyops-intake.json is frozen for backwards compatibility. See docs/ai-architecture.md.\n\nThis canonical main export mirrors the deterministic intake flow and marks where the optional AI Copilot workflow slots in after validation.",
+        height: 220,
+        width: 380,
+        color: 6
+      },
+      id: "3d353319-9156-4417-8be8-ad0b784e8a64",
+      name: "Backwards Compatibility Contract",
+      type: "n8n-nodes-base.stickyNote",
+      typeVersion: 1,
+      position: [-1260, 20]
+    },
+    {
+      parameters: {
+        content:
+          "Optional AI enrichment slot: after Validate + Score Application succeeds, call AutoApplyOps - AI Copilot if local Ollama is available. The deterministic route remains the fallback and source of truth.",
+        height: 180,
+        width: 340,
+        color: 7
+      },
+      id: "777e6fc8-dfd3-4838-9e3c-298a1d08d29b",
+      name: "AI Copilot Slot",
+      type: "n8n-nodes-base.stickyNote",
+      typeVersion: 1,
+      position: [-630, -170]
+    },
+    ...workflow.nodes
+  ]
+};
+
+const aiCopilotWorkflow = {
+  name: "AutoApplyOps - AI Copilot",
+  nodes: [
+    {
+      parameters: {
+        content:
+          "Credential-safe AI Copilot export. Ollama is called through HTTP Request at http://localhost:11434/api/generate. If Ollama is down, slow, or returns invalid JSON, the workflow falls back to the deterministic route and marks aiStatus=fallback.",
+        height: 240,
+        width: 380,
+        color: 7
+      },
+      id: "7a459f9f-5a8e-4e61-8d3d-1c53a47f830f",
+      name: "Fallback Behavior Note",
+      type: "n8n-nodes-base.stickyNote",
+      typeVersion: 1,
+      position: [-1180, -300]
+    },
+    {
+      parameters: {
+        content:
+          "Human Review uses the n8n Wait-node resume-webhook pattern. A reviewer approves, rejects, or archives from the resume URL; that resolution is the feedback collection point for ML readiness.",
+        height: 220,
+        width: 360,
+        color: 5
+      },
+      id: "b5837f37-8b35-4ab7-b93a-1ef6dc0f2f72",
+      name: "Human Review Resume Note",
+      type: "n8n-nodes-base.stickyNote",
+      typeVersion: 1,
+      position: [380, -300]
+    },
+    {
+      parameters: {
+        httpMethod: "POST",
+        path: "autoapplyops/ai-copilot",
+        responseMode: "lastNode",
+        options: {
+          allowedOrigins: "*"
+        }
+      },
+      id: "bde7bd3b-85b1-4429-960c-593ee3d9db7f",
+      name: "Webhook",
+      type: "n8n-nodes-base.webhook",
+      typeVersion: 2,
+      position: [-1000, 80],
+      webhookId: "autoapplyops-ai-copilot"
+    },
+    {
+      parameters: {
+        jsCode: `
+const required = ["applicationId", "company", "role", "source"];
+const missing = required.filter((field) => !$json[field]);
+return [{ json: { ...$json, validationStatus: missing.length ? "invalid" : "valid", validationErrors: missing } }];
+`.trim()
+      },
+      id: "08f83ea3-1d07-40a3-a1b8-46d5cc908be6",
+      name: "Validate Payload",
+      type: "n8n-nodes-base.code",
+      typeVersion: 2,
+      position: [-740, 80]
+    },
+    {
+      parameters: {
+        jsCode: scoringCode.replace("return [{ json: evaluateApplication($json, runtimeOptions) }];", "const scoringResult = evaluateApplication($json, runtimeOptions);\nreturn [{ json: { ...$json, scoringResult } }];")
+      },
+      id: "f65d2e4f-8214-4e51-a197-9a0c7a2f36c48",
+      name: "Deterministic Score",
+      type: "n8n-nodes-base.code",
+      typeVersion: 2,
+      position: [-480, 80]
+    },
+    {
+      parameters: {
+        method: "POST",
+        url: "={{ $env.OLLAMA_BASE_URL || 'http://localhost:11434' }}/api/generate",
+        sendBody: true,
+        contentType: "json",
+        jsonBody:
+          "={{ { model: $env.AUTOAPPLYOPS_AI_MODEL || 'gemma3:4b', stream: false, format: 'json', prompt: JSON.stringify({ sanitizedPayload: $json.scoringResult.sanitizedPayload, deterministicScore: $json.scoringResult.score, route: $json.scoringResult.route, requiredShape: { aiFitSummary: '1-3 sentence plain summary', resumeSignalScore: 0, riskFlags: [], followUpTone: 'neutral', recommendedAction: 'hold', confidence: 0.55, aiStatus: 'available', modelUsed: $env.AUTOAPPLYOPS_AI_MODEL || 'gemma3:4b', evaluatedAt: new Date().toISOString() } }) } }}",
+        options: {
+          timeout: 5000,
+          response: {
+            response: {
+              neverError: true
+            }
+          }
+        }
+      },
+      id: "c1df1a13-8e47-42b9-8a61-0a7fdc6e06d6",
+      name: "AI Evaluate",
+      type: "n8n-nodes-base.httpRequest",
+      typeVersion: 4.2,
+      position: [-210, 80],
+      notesInFlow: true,
+      notes: "Local Ollama call only; no credentials. Downstream Route Decision treats HTTP errors, timeout, invalid JSON, or missing fields as aiStatus=fallback."
+    },
+    {
+      parameters: {
+        jsCode: `
+const scoring = $json.scoringResult || {};
+let ai = null;
+try {
+  ai = typeof $json.response === "string" ? JSON.parse($json.response) : null;
+} catch (error) {
+  ai = null;
+}
+const required = ["aiFitSummary", "resumeSignalScore", "riskFlags", "followUpTone", "recommendedAction", "confidence", "aiStatus", "modelUsed", "evaluatedAt"];
+const complete = ai && required.every((field) => Object.hasOwn(ai, field));
+if (!complete) {
+  ai = {
+    aiFitSummary: "AI unavailable; deterministic rules engine is routing this application.",
+    resumeSignalScore: scoring.score || 0,
+    riskFlags: scoring.priority === "duplicate" ? [{ flag: "duplicate_suspected", severity: "medium" }] : [],
+    followUpTone: scoring.priority === "hot" ? "warm" : "neutral",
+    recommendedAction: scoring.priority === "hot" ? "advance" : scoring.priority === "low" ? "archive" : "hold",
+    confidence: scoring.priority === "hot" ? 0.78 : 0.58,
+    aiStatus: "fallback",
+    modelUsed: "rules-engine/v1",
+    evaluatedAt: new Date().toISOString()
+  };
+}
+const humanReviewRequired = ai.confidence < 0.55 || ai.recommendedAction === "escalate_to_human" || ai.riskFlags.some((risk) => risk.severity === "high");
+const route = scoring.priority === "duplicate" ? "duplicate" : humanReviewRequired ? "human_review" : ai.recommendedAction;
+return [{ json: { ...$json, aiEvaluation: ai, humanReviewRequired, routeDecision: route } }];
+`.trim()
+      },
+      id: "af7d1275-0efa-4e0c-bbce-e6d43a68c4bd",
+      name: "Route Decision",
+      type: "n8n-nodes-base.code",
+      typeVersion: 2,
+      position: [50, 80]
+    },
+    {
+      parameters: {
+        rules: {
+          values: [
+            {
+              conditions: {
+                conditions: [{ leftValue: "={{ $json.routeDecision }}", rightValue: "advance", operator: { type: "string", operation: "equals" } }],
+                combinator: "and"
+              },
+              renameOutput: true,
+              outputKey: "Hot Lead"
+            },
+            {
+              conditions: {
+                conditions: [{ leftValue: "={{ $json.routeDecision }}", rightValue: "hold", operator: { type: "string", operation: "equals" } }],
+                combinator: "and"
+              },
+              renameOutput: true,
+              outputKey: "Hold"
+            },
+            {
+              conditions: {
+                conditions: [{ leftValue: "={{ $json.routeDecision }}", rightValue: "human_review", operator: { type: "string", operation: "equals" } }],
+                combinator: "and"
+              },
+              renameOutput: true,
+              outputKey: "Human Review"
+            },
+            {
+              conditions: {
+                conditions: [{ leftValue: "={{ $json.routeDecision }}", rightValue: "archive", operator: { type: "string", operation: "equals" } }],
+                combinator: "and"
+              },
+              renameOutput: true,
+              outputKey: "Archive"
+            },
+            {
+              conditions: {
+                conditions: [{ leftValue: "={{ $json.routeDecision }}", rightValue: "duplicate", operator: { type: "string", operation: "equals" } }],
+                combinator: "and"
+              },
+              renameOutput: true,
+              outputKey: "Duplicate Guard"
+            }
+          ]
+        },
+        options: {
+          fallbackOutput: "extra",
+          renameFallbackOutput: "Hold"
+        }
+      },
+      id: "c335f219-6bcb-44a2-a88b-7c86f148b45d",
+      name: "Route Switch",
+      type: "n8n-nodes-base.switch",
+      typeVersion: 3.2,
+      position: [310, 80]
+    },
+    {
+      parameters: { jsCode: "return items.map((item) => ({ json: { ...item.json, exitPoint: 'hot_lead', feedbackSource: 'auto_advance' } }));" },
+      id: "b39c1fae-70fb-4a32-878a-4efbcb1b2fbb",
+      name: "Hot Lead",
+      type: "n8n-nodes-base.code",
+      typeVersion: 2,
+      position: [620, -130]
+    },
+    {
+      parameters: { jsCode: "return items.map((item) => ({ json: { ...item.json, exitPoint: 'hold' } }));" },
+      id: "40df2f6e-7ec4-4958-b57c-5185bf8f1988",
+      name: "Hold",
+      type: "n8n-nodes-base.code",
+      typeVersion: 2,
+      position: [620, 20]
+    },
+    {
+      parameters: {
+        resume: "webhook",
+        options: {}
+      },
+      id: "a6ade404-854e-4f66-96a6-fb13b6986f24",
+      name: "Human Review",
+      type: "n8n-nodes-base.wait",
+      typeVersion: 1.1,
+      position: [620, 170],
+      notesInFlow: true,
+      notes: "Reviewer resolves through the Wait resume webhook. Record feedback with source=human_review when the resume payload is received."
+    },
+    {
+      parameters: { jsCode: "return items.map((item) => ({ json: { ...item.json, exitPoint: 'archive', feedbackSource: 'auto_archive' } }));" },
+      id: "58c10daf-ae2d-4f2d-9a04-7c652ec3d71d",
+      name: "Archive",
+      type: "n8n-nodes-base.code",
+      typeVersion: 2,
+      position: [620, 320]
+    },
+    {
+      parameters: { jsCode: "return items.map((item) => ({ json: { ...item.json, exitPoint: 'duplicate_guard', feedbackSource: 'duplicate_guard' } }));" },
+      id: "0eeec2a2-fc16-46e5-9654-b01fe7f46f7e",
+      name: "Duplicate Guard",
+      type: "n8n-nodes-base.code",
+      typeVersion: 2,
+      position: [620, 470]
+    }
+  ],
+  connections: {
+    Webhook: { main: [[{ node: "Validate Payload", type: "main", index: 0 }]] },
+    "Validate Payload": { main: [[{ node: "Deterministic Score", type: "main", index: 0 }]] },
+    "Deterministic Score": { main: [[{ node: "AI Evaluate", type: "main", index: 0 }]] },
+    "AI Evaluate": { main: [[{ node: "Route Decision", type: "main", index: 0 }]] },
+    "Route Decision": { main: [[{ node: "Route Switch", type: "main", index: 0 }]] },
+    "Route Switch": {
+      main: [
+        [{ node: "Hot Lead", type: "main", index: 0 }],
+        [{ node: "Hold", type: "main", index: 0 }],
+        [{ node: "Human Review", type: "main", index: 0 }],
+        [{ node: "Archive", type: "main", index: 0 }],
+        [{ node: "Duplicate Guard", type: "main", index: 0 }],
+        [{ node: "Hold", type: "main", index: 0 }]
+      ]
+    }
+  },
+  active: false,
+  settings: {
+    executionOrder: "v1"
+  },
+  versionId: "autoapplyops-ai-copilot-v1",
+  meta: {
+    templateCredsSetupCompleted: true,
+    instanceId: "portfolio-demo"
+  },
+  tags: [{ name: "portfolio" }, { name: "ai-copilot" }, { name: "ollama" }]
+};
+
 mkdirSync("workflows", { recursive: true });
-writeFileSync("workflows/autoapplyops-intake.json", `${JSON.stringify(workflow, null, 2)}\n`);
+writeFileSync("workflows/autoapplyops-main.json", `${JSON.stringify(mainWorkflow, null, 2)}\n`);
+writeFileSync("workflows/autoapplyops-ai-copilot.json", `${JSON.stringify(aiCopilotWorkflow, null, 2)}\n`);
 writeFileSync("workflows/autoapplyops-error-handler.json", `${JSON.stringify(errorWorkflow, null, 2)}\n`);
-console.log("Generated workflows/autoapplyops-intake.json and workflows/autoapplyops-error-handler.json");
+console.log("Generated workflows/autoapplyops-main.json, workflows/autoapplyops-ai-copilot.json, and workflows/autoapplyops-error-handler.json");

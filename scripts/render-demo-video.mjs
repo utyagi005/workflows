@@ -24,55 +24,50 @@ try {
     {
       file: `${FRAME_DIR}/01-hot-lead.png`,
       action: async () => {
-        await page.selectOption("#payloadSelect", "high-priority-application.json");
+        await page.locator('[data-action="hot"]').click();
       },
-      label: "1. Webhook intake",
-      caption: "A valid internship payload becomes a hot lead with score, route, and draft."
+      label: "1. Hot Lead",
+      caption: "A strong application updates KPIs, the funnel, queue, and AI Copilot at once."
     },
     {
-      file: `${FRAME_DIR}/02-weight-tuning.png`,
+      file: `${FRAME_DIR}/02-ai-fallback.png`,
       action: async () => {
-        await page.locator('[data-weight="skills"]').evaluate((input) => {
-          input.value = "45";
-          input.dispatchEvent(new Event("input", { bubbles: true }));
-        });
+        await page.locator('[data-action="fallback"]').click();
       },
-      label: "2. Tune scoring",
-      caption: "Users can raise skill weight and instantly see the decision matrix change."
+      label: "2. AI Fallback",
+      caption: "When the model is unavailable, the dashboard switches to deterministic rules."
     },
     {
       file: `${FRAME_DIR}/03-duplicate-review.png`,
       action: async () => {
-        await page.locator("#duplicateToggle").check();
+        await page.locator('[data-action="duplicate"]').click();
       },
       label: "3. Duplicate guard",
-      caption: "A repeated application ID routes to Duplicate Review instead of creating another follow-up."
+      caption: "Duplicate routing protects recruiters from repeated webhook replays."
     },
     {
-      file: `${FRAME_DIR}/04-secret-fail.png`,
+      file: `${FRAME_DIR}/04-human-review.png`,
       action: async () => {
-        await page.locator("#duplicateToggle").uncheck();
-        await page.locator("#secretToggle").check();
+        await page.locator('[data-action="review"]').click();
       },
-      label: "4. Webhook safety",
-      caption: "Optional shared-secret enforcement rejects unsafe public webhook payloads."
+      label: "4. Human Review",
+      caption: "Amber review mode locks advance controls and shows the 24h decision SLA."
     },
     {
-      file: `${FRAME_DIR}/05-review-queue.png`,
+      file: `${FRAME_DIR}/05-learning-signal.png`,
       action: async () => {
-        await page.locator("#secretToggle").uncheck();
-        await page.selectOption("#payloadSelect", "review-application.json");
+        await page.locator("#openReport").click();
       },
-      label: "5. Review queue",
-      caption: "Medium-fit applications stay organized for batch review."
+      label: "5. Calibration",
+      caption: "Learning Signal turns feedback into calibration evidence and training exports."
     },
     {
       file: `${FRAME_DIR}/06-invalid.png`,
       action: async () => {
-        await page.selectOption("#payloadSelect", "invalid-application.json");
+        await page.locator('[data-action="invalid"]').click();
       },
       label: "6. Repair path",
-      caption: "Incomplete submissions return clear validation errors and repair instructions."
+      caption: "Invalid payloads are stopped before evaluation and marked for repair."
     }
   ];
 

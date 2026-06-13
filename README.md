@@ -2,6 +2,8 @@
 
 AutoApplyOps is a portfolio-ready n8n workflow that turns an incoming internship application payload into a validated, scored, routed, duplicate-aware, and documented follow-up workflow.
 
+![AutoApplyOps dashboard screenshot](docs/assets/demo-dashboard.png)
+
 ![AutoApplyOps interactive demo](docs/assets/autoapplyops-demo.gif)
 
 <video src="docs/assets/autoapplyops-demo.mp4" controls width="100%"></video>
@@ -25,6 +27,8 @@ The project shows:
 - Conditional routing for hot, review, low, duplicate, and invalid applications.
 - Duplicate detection for idempotency-style webhook replays.
 - Optional shared-secret validation for safer public webhook use.
+- Optional local Ollama AI Copilot with deterministic fallback.
+- SQLite-backed feedback collection for future ML calibration.
 - Dedicated n8n error-handler workflow with sanitized owner-alert payloads.
 - Decision matrix output that explains each score contribution.
 - Automation hints for the next action, SLA, notification channel, and retryability.
@@ -60,20 +64,56 @@ flowchart LR
   X["Error Trigger Workflow"] --> Y["Sanitized Owner Alert"]
 ```
 
+## AI Layer
+
+The AI Copilot layer is optional and credential-free. It calls local Ollama at `http://localhost:11434` with `gemma3:4b` by default, validates the complete response against `schemas/autoapplyops-ai-evaluation.schema.json`, and falls back to `rules-engine/v1` whenever Ollama is unavailable, slow, malformed, or disabled.
+
+One-command Ollama setup:
+
+```bash
+ollama pull gemma3:4b
+```
+
+Human review is triggered when AI confidence is below `0.55`, when the AI recommends `escalate_to_human`, or when any risk flag is high severity. The dashboard surfaces the 24h human-review SLA and shows fallback/disabled states without requiring Ollama to be running.
+
 ## Repository Structure
 
 ```text
 .
 ├── demo/                         # Local browser demo dashboard
+├── data/                         # Tracked directory; runtime DB/export files are gitignored
 ├── docs/                         # Project brief, demo script, import/security docs
 ├── docs/reports/                 # Generated simulation and scorecard reports
-├── schemas/                      # Webhook payload contract
+├── schemas/                      # Intake, AI evaluation, and feedback contracts
 ├── docs/assets/                  # Screenshots, concept image, and MP4 demo
 ├── samples/                      # Sanitized payload fixtures
 ├── scripts/                      # Workflow generation, validation, media capture
+├── lib/                          # AI evaluator and feedback store modules
 ├── src/scoring.mjs               # Shared scoring and sanitization logic
-├── tests/scoring.test.mjs        # Node test coverage
-└── workflows/                    # Main intake and error-handler n8n workflows
+├── tests/                        # Node test coverage
+└── workflows/                    # Frozen intake, main, AI Copilot, and error-handler n8n workflows
+```
+
+`workflows/autoapplyops-intake.json` is frozen for backwards compatibility. New deterministic updates live in `workflows/autoapplyops-main.json`, and optional AI enrichment lives in `workflows/autoapplyops-ai-copilot.json`.
+
+## Prerequisites
+
+- Node.js 20+
+- Ollama, optional for the AI layer
+- node-gyp build tools for feedback persistence through `better-sqlite3`
+- Python 3, required by node-gyp on some systems
+
+Platform build-tool setup:
+
+```bash
+# macOS
+xcode-select --install
+
+# Ubuntu
+sudo apt-get install build-essential
+
+# Windows
+npm install --global windows-build-tools
 ```
 
 ## Quick Start
@@ -84,7 +124,7 @@ npm run verify
 npm run serve
 ```
 
-Open `http://127.0.0.1:4173/demo/` and use the builder to edit payload fields, tune scoring weights, change target skills, toggle duplicate detection, and test shared-secret enforcement.
+Open `http://127.0.0.1:4173/demo/` and use the simulation controls to test hot leads, hold routing, duplicates, invalid payloads, AI fallback, human review, risky payloads, and the Learning Signal panel.
 
 ## Import Into n8n
 
@@ -104,6 +144,8 @@ CLI import:
 
 ```bash
 n8n import:workflow --input=workflows/autoapplyops-intake.json
+n8n import:workflow --input=workflows/autoapplyops-main.json
+n8n import:workflow --input=workflows/autoapplyops-ai-copilot.json
 n8n import:workflow --input=workflows/autoapplyops-error-handler.json
 ```
 
@@ -175,6 +217,7 @@ Verification covers:
 - Hot lead, review queue, duplicate, invalid secret, invalid payload, scoring-tuning, and sanitized logging tests pass.
 - Sample simulation report is generated.
 - Workflow scorecard reaches `100/100`.
+- ML readiness check validates feedback schema, SQLite migrations, append-only trigger, calibration export, and training data shape.
 - Browser screenshots, GIF preview, and MP4 demo render from the actual local dashboard.
 
 ## Built With
@@ -198,5 +241,8 @@ Verification covers:
 - [Workflow scorecard](docs/reports/workflow-scorecard.md)
 - [Research and recommendations](docs/research-and-recommendations.md)
 - [Operations runbook](docs/operations.md)
+- [AI architecture](docs/ai-architecture.md)
+- [Feedback store](docs/feedback-store.md)
+- [ML roadmap](docs/ml-roadmap.md)
 
 GitHub recommends a README explain what the project does, why it is useful, and how people can use it. This repository follows that guidance from [GitHub Docs](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes).

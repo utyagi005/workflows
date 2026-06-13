@@ -7,11 +7,12 @@
     "test": "node --test",
     "validate": "node scripts/validate-workflow.mjs",
     "simulate": "node scripts/simulate-samples.mjs",
+    "ml:check": "node scripts/ml-readiness-check.mjs",
     "score": "node scripts/score-workflow.mjs",
     "serve": "npx http-server . -p 4173 -c-1",
     "screenshots": "node scripts/capture-demo.mjs",
     "demo:video": "node scripts/render-demo-video.mjs",
-    "verify": "npm run validate && npm test && npm run simulate && npm run score"
+    "verify": "npm run validate && npm test && npm run simulate && npm run ml:check && npm run score"
   },
   "keywords": [
     "n8n",
@@ -24,6 +25,12 @@
   "license": "MIT",
   "devDependencies": {
     "@playwright/test": "^1.56.1",
-    "http-server": "^14.1.1"
+    "http-server": "^14.1.1",
+    "uuid": "^9.0.1"
+  },
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "ajv-formats": "^2.1.1",
+    "better-sqlite3": "^9.6.0"
   }
 }

@@ -1,0 +1,12 @@
+{
+  "applicationId": "ai-success-001",
+  "applicantName": "Maya Chen",
+  "email": "maya.chen@example.com",
+  "company": "Northstar Robotics",
+  "role": "Software Engineering Intern",
+  "deadline": "2026-06-15",
+  "location": "Remote",
+  "skills": ["JavaScript", "Node", "API", "automation", "PostgreSQL", "n8n"],
+  "source": "referral",
+  "notes": "Built workflow automations, API integrations, and queue dashboards for a student operations team."
+}

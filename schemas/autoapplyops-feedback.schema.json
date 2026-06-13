@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://autoapplyops.local/schemas/autoapplyops-feedback.schema.json",
+  "title": "AutoApplyOps Feedback Record",
+  "$comment": "Append-only schema. Feedback records are never mutated after write; corrections must be inserted as new records in a future schema version.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "feedbackId",
+    "applicationId",
+    "evaluatedAt",
+    "feedbackRecordedAt",
+    "source",
+    "decision",
+    "decisionMadeBy",
+    "aiWasCorrect",
+    "confidenceAtDecision",
+    "riskFlagsAtDecision",
+    "resumeSignalScoreAtDecision",
+    "overrideReason",
+    "modelUsed",
+    "feedbackVersion"
+  ],
+  "properties": {
+    "feedbackId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "applicationId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evaluatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "feedbackRecordedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "string",
+      "enum": ["human_review", "auto_advance", "auto_archive", "duplicate_guard", "follow_up_resolution"]
+    },
+    "decision": {
+      "type": "string",
+      "enum": ["hired", "rejected", "ghosted", "still_in_process", "duplicate"]
+    },
+    "decisionMadeBy": {
+      "type": "string",
+      "enum": ["human_reviewer", "system"]
+    },
+    "aiWasCorrect": {
+      "type": ["boolean", "null"]
+    },
+    "confidenceAtDecision": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 1
+    },
+    "riskFlagsAtDecision": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "salary_mismatch",
+          "location_conflict",
+          "role_scope_unclear",
+          "duplicate_suspected",
+          "missing_resume",
+          "unrealistic_timeline",
+          "credential_gap"
+        ]
+      }
+    },
+    "resumeSignalScoreAtDecision": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 100
+    },
+    "overrideReason": {
+      "type": ["string", "null"]
+    },
+    "modelUsed": {
+      "type": "string",
+      "minLength": 1
+    },
+    "feedbackVersion": {
+      "type": "string",
+      "const": "1.0"
+    }
+  }
+}

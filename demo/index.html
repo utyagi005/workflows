@@ -3,238 +3,239 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AutoApplyOps Demo</title>
+    <title>AutoApplyOps Intelligence Console</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="shell">
-      <aside class="sidebar" aria-label="Demo navigation">
-        <div class="brand">
-          <div class="brand-mark" aria-hidden="true">
-            <span></span><span></span><span></span>
-          </div>
+    <div class="app-shell">
+      <header class="topbar" aria-label="Operations status">
+        <div class="project-lockup">
+          <span class="mark" aria-hidden="true"></span>
           <div>
-            <strong>AutoApplyOps</strong>
-            <small>n8n workflow demo</small>
+            <h1>AutoApplyOps</h1>
+            <p>AI + ML readiness command center</p>
           </div>
         </div>
-        <nav>
-          <a class="active" href="#workflow">Workflow</a>
-          <a href="#builder">Builder</a>
-          <a href="#payload">Payload</a>
-          <a href="#report">Report</a>
-          <a href="#followup">Follow-up</a>
-        </nav>
-        <div class="owner">
-          <div class="avatar">AO</div>
-          <div>
-            <strong>Portfolio Build</strong>
-            <small>Importable JSON</small>
-          </div>
+        <div class="topbar-status">
+          <time id="liveClock" datetime="">--:--:--</time>
+          <span class="model-pill" id="modelStatus" role="status">AI model: active</span>
+          <label class="switch" for="aiToggle">
+            <span>AI Assist</span>
+            <input id="aiToggle" type="checkbox" checked aria-label="Toggle AI copilot" />
+          </label>
         </div>
-      </aside>
+      </header>
 
-      <main>
-        <header class="topbar">
-          <div>
-            <h1>AutoApplyOps Dashboard</h1>
-            <p>Internship application intake, scoring, routing, and follow-up in one n8n workflow.</p>
-          </div>
-          <div class="actions">
-            <span class="status-dot">Active demo</span>
-            <a class="button secondary" href="../workflows/autoapplyops-intake.json">Workflow JSON</a>
-            <button class="button primary" id="runDemo">Run Demo</button>
-          </div>
-        </header>
-
-        <section class="panel builder-panel" id="builder">
-          <div class="panel-heading">
-            <div>
-              <h2>Interactive Workflow Builder</h2>
-              <p>Change the payload, target profile, and safety checks to see how the n8n workflow responds.</p>
-            </div>
-            <button class="button secondary" id="resetDemo">Reset</button>
-          </div>
-          <form class="builder-grid" id="payloadForm">
-            <label>
-              Application ID
-              <input id="applicationIdInput" name="applicationId" />
-            </label>
-            <label>
-              Company
-              <input id="companyInput" name="company" />
-            </label>
-            <label>
-              Role
-              <input id="roleInput" name="role" />
-            </label>
-            <label>
-              Deadline
-              <input id="deadlineInput" name="deadline" type="date" />
-            </label>
-            <label>
-              Location
-              <select id="locationInput" name="location">
-                <option>Remote</option>
-                <option>Hybrid</option>
-                <option>Toronto</option>
-                <option>On-site</option>
-              </select>
-            </label>
-            <label>
-              Source
-              <select id="sourceInput" name="source">
-                <option value="career-page">career-page</option>
-                <option value="referral">referral</option>
-                <option value="job-board">job-board</option>
-                <option value="manual-entry">manual-entry</option>
-              </select>
-            </label>
-            <label class="wide">
-              Skills
-              <input id="skillsInput" name="skills" />
-            </label>
-            <label class="wide">
-              Notes
-              <input id="notesInput" name="notes" />
-            </label>
-          </form>
-          <div class="config-grid">
-            <label class="wide">
-              Target skills
-              <input id="targetSkillsInput" />
-            </label>
-            <label class="toggle-row">
-              <input id="duplicateToggle" type="checkbox" />
-              Treat this application ID as already seen
-            </label>
-            <label class="toggle-row">
-              <input id="secretToggle" type="checkbox" />
-              Require shared webhook secret
-            </label>
-            <div class="sliders" aria-label="Scoring weights">
-              <label>Deadline <input class="weight-input" data-weight="deadline" type="range" min="0" max="40" value="25" /></label>
-              <label>Skills <input class="weight-input" data-weight="skills" type="range" min="0" max="50" value="30" /></label>
-              <label>Role <input class="weight-input" data-weight="role" type="range" min="0" max="35" value="20" /></label>
-              <label>Source <input class="weight-input" data-weight="source" type="range" min="0" max="15" value="5" /></label>
-            </div>
-          </div>
+      <main class="dashboard">
+        <section class="kpi-strip" aria-label="Operational KPIs">
+          <article class="kpi-card">
+            <span>Total Intakes</span>
+            <strong id="kpiQualified">184</strong>
+            <small>+12.4% week over week</small>
+          </article>
+          <article class="kpi-card">
+            <span>Hot Leads</span>
+            <strong id="kpiPrecision">31</strong>
+            <small>fast-track recruiter queue</small>
+          </article>
+          <article class="kpi-card">
+            <span>Review Queue</span>
+            <strong id="kpiSla">9</strong>
+            <small>24h human-review SLA</small>
+          </article>
+          <article class="kpi-card">
+            <span>Duplicates</span>
+            <strong id="kpiRisks">27</strong>
+            <small>guarded webhook replays</small>
+          </article>
+          <article class="kpi-card">
+            <span>Avg AI Confidence</span>
+            <strong id="kpiReviews">94.2%</strong>
+            <small>latest evaluated batch</small>
+          </article>
         </section>
 
-        <section class="board" id="workflow">
-          <div class="panel pipeline-panel">
+        <section class="command-grid">
+          <section class="panel intelligence-panel" aria-labelledby="funnelTitle">
             <div class="panel-heading">
-              <h2>Workflow Pipeline</h2>
-              <span id="lastRun">Ready</span>
-            </div>
-            <div class="pipeline" aria-label="Workflow stages">
-              <article class="stage complete">
-                <div class="stage-icon">⌁</div>
-                <strong>Webhook</strong>
-                <small>Intake</small>
-              </article>
-              <article class="stage complete">
-                <div class="stage-icon">□</div>
-                <strong>Validate</strong>
-                <small>Schema</small>
-              </article>
-              <article class="stage active">
-                <div class="stage-icon">☆</div>
-                <strong>Score</strong>
-                <small>Fit</small>
-              </article>
-              <article class="stage complete">
-                <div class="stage-icon">⌯</div>
-                <strong>Route</strong>
-                <small>Priority</small>
-              </article>
-              <article class="stage complete">
-                <div class="stage-icon">↗</div>
-                <strong>Respond</strong>
-                <small>Draft</small>
-              </article>
+              <div>
+                <h2 id="funnelTitle">Routing Intelligence</h2>
+                <p id="routingState">Live candidate scored for hot lead escalation.</p>
+              </div>
+              <span class="state-badge" id="routeBadge">Hot Lead</span>
             </div>
 
-            <div class="metrics" aria-label="Workflow metrics">
-              <article>
-                <span>128</span>
-                <small>Mock intakes</small>
+            <div class="funnel-layout">
+              <div class="funnel-wrap" aria-label="Animated routing funnel">
+                <svg class="funnel-svg" viewBox="0 0 420 310" role="img" aria-labelledby="funnelSvgTitle funnelSvgDesc">
+                  <title id="funnelSvgTitle">Candidate routing funnel</title>
+                  <desc id="funnelSvgDesc">Applications narrow through intake, fit scoring, risk screen, and recruiter action.</desc>
+                  <defs>
+                    <linearGradient id="tealFill" x1="0" x2="1" y1="0" y2="1">
+                      <stop offset="0%" stop-color="#00D4AA" stop-opacity="0.95" />
+                      <stop offset="100%" stop-color="#00D4AA" stop-opacity="0.32" />
+                    </linearGradient>
+                    <clipPath id="funnelClip">
+                      <path d="M45 25H375L320 105H100L138 172H282L248 238H172L196 286H224L248 238L282 172L320 105Z" />
+                    </clipPath>
+                  </defs>
+                  <path class="funnel-outline" d="M45 25H375L320 105H100L138 172H282L248 238H172L196 286H224L248 238L282 172L320 105Z" />
+                  <g clip-path="url(#funnelClip)">
+                    <rect class="funnel-fill" id="funnelFill" x="45" y="25" width="330" height="261" />
+                  </g>
+                  <path class="funnel-segment" d="M78 73H342" />
+                  <path class="funnel-segment" d="M118 138H302" />
+                  <path class="funnel-segment" d="M156 205H264" />
+                  <g class="funnel-labels">
+                    <text x="210" y="63">Intake</text>
+                    <text x="210" y="128">Fit Score</text>
+                    <text x="210" y="195">Risk Screen</text>
+                    <text x="210" y="266">Action</text>
+                  </g>
+                </svg>
+              </div>
+
+              <article class="candidate-card" id="activeCandidate" aria-live="polite">
+                <div class="candidate-topline">
+                  <div>
+                    <span class="mono" id="candidateId">CND-1048</span>
+                    <h3 id="candidateName">Maya Chen</h3>
+                  </div>
+                  <strong id="candidateScore">96</strong>
+                </div>
+                <dl>
+                  <div><dt>Target role</dt><dd id="candidateRole">ML Platform Intern</dd></div>
+                  <div><dt>Signal density</dt><dd id="candidateSignals">7 strong, 1 watch</dd></div>
+                  <div><dt>Source</dt><dd id="candidateSource">Referral + portfolio</dd></div>
+                  <div><dt>Next action</dt><dd id="candidateAction">Recruiter outreach</dd></div>
+                </dl>
               </article>
-              <article>
-                <span id="scoreMetric">87</span>
-                <small>Current score</small>
-              </article>
-              <article>
-                <span id="routeMetric">Hot</span>
-                <small>Current route</small>
-              </article>
-              <article>
-                <span id="slaMetric">24h</span>
-                <small>Suggested SLA</small>
-              </article>
+            </div>
+          </section>
+
+          <aside class="panel ai-panel" id="aiPanel" aria-labelledby="copilotTitle">
+            <div class="panel-heading">
+              <div>
+                <h2 id="copilotTitle">AI Copilot</h2>
+                <p id="copilotSubtitle">Generated triage narrative and routing confidence.</p>
+              </div>
+              <span class="state-badge teal" id="copilotState">Online</span>
+            </div>
+            <p class="ai-summary" id="aiSummary">Candidate exceeds fit threshold with verified automation, Node, and ML evaluation signals. Recommend immediate recruiter touch with portfolio-specific context.</p>
+            <div class="confidence" aria-label="AI confidence">
+              <div>
+                <span>Confidence</span>
+                <strong id="confidenceValue">94%</strong>
+              </div>
+              <meter id="confidenceMeter" min="0" max="100" value="94">94%</meter>
+            </div>
+            <div>
+              <span class="section-label">Risk flags</span>
+              <div class="risk-list" id="riskFlags"></div>
+            </div>
+            <dl class="copilot-meta">
+              <div><dt>Action</dt><dd id="aiAction">Advance to recruiter</dd></div>
+              <div><dt>Tone</dt><dd id="aiTone">Direct, specific, warm</dd></div>
+            </dl>
+          </aside>
+        </section>
+
+        <section class="lower-grid">
+          <section class="panel queue-panel" aria-labelledby="queueTitle">
+            <div class="panel-heading">
+              <div>
+                <h2 id="queueTitle">Candidate Queue</h2>
+                <p>Keyboard accessible simulation controls update the routing state and learning signals.</p>
+              </div>
+              <span class="state-badge amber hidden" id="reviewBadge">Pending Review</span>
             </div>
 
             <div class="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>Application</th>
-                    <th>Company</th>
-                    <th>Priority</th>
+                    <th>Candidate</th>
+                    <th>Role</th>
+                    <th>Score</th>
                     <th>Route</th>
+                    <th>Risk</th>
+                    <th>SLA</th>
                   </tr>
                 </thead>
-                <tbody id="executionRows"></tbody>
+                <tbody id="candidateRows"></tbody>
               </table>
             </div>
-          </div>
 
-          <aside class="right-rail">
-            <section class="panel" id="payload">
-              <div class="panel-heading">
-                <h2>Demo Payload</h2>
-                <select id="payloadSelect" aria-label="Select sample payload">
-                  <option value="high-priority-application.json">Hot lead</option>
-                  <option value="review-application.json">Review queue</option>
-                  <option value="invalid-application.json">Invalid</option>
-                </select>
-              </div>
-              <pre id="payloadView"></pre>
-            </section>
+            <div class="simulation-controls" aria-label="Simulation controls">
+              <button class="control hot" data-action="hot" type="button">Hot Lead</button>
+              <button class="control" data-action="hold" type="button">Hold</button>
+              <button class="control" data-action="duplicate" type="button">Duplicate</button>
+              <button class="control danger" data-action="invalid" type="button">Invalid</button>
+              <button class="control" data-action="fallback" type="button">AI Fallback</button>
+              <button class="control amber" data-action="review" type="button">Human Review</button>
+              <button class="control danger" data-action="risky" type="button">Risky Payload</button>
+            </div>
+          </section>
 
-            <section class="panel result-panel" id="report">
-              <div class="panel-heading">
-                <h2>Triage Report</h2>
-                <span class="pill" id="priorityPill">Hot lead</span>
+          <section class="panel learning-panel" aria-labelledby="learningTitle">
+            <div class="panel-heading">
+              <div>
+                <h2 id="learningTitle">Learning Signal</h2>
+                <p>Feedback records become supervised training examples for calibration.</p>
               </div>
-              <dl>
-                <div><dt>Score</dt><dd id="scoreValue">87/100</dd></div>
-                <div><dt>Status</dt><dd id="statusValue">valid</dd></div>
-                <div><dt>Route</dt><dd id="routeValue">High Priority Follow-up</dd></div>
-                <div><dt>Next step</dt><dd id="nextStepValue">send follow-up</dd></div>
-                <div><dt>Signals</dt><dd id="reasonValue">deadline_urgent, skill_match_4</dd></div>
-              </dl>
-            </section>
+              <span class="accuracy-badge" id="accuracyBadge">AI accuracy 94.2%</span>
+            </div>
 
-            <section class="panel matrix-panel">
-              <div class="panel-heading">
-                <h2>Decision Matrix</h2>
-                <span id="weightTotal">100 pts</span>
-              </div>
-              <div id="decisionMatrix" class="matrix-list"></div>
-            </section>
+            <div class="feedback-list" id="feedbackList" aria-label="Feedback records"></div>
 
-            <section class="panel followup-panel" id="followup">
-              <div class="panel-heading">
-                <h2>Follow-up Draft</h2>
-                <span>Sanitized</span>
-              </div>
-              <pre id="followUpView"></pre>
-            </section>
-          </aside>
+            <div class="calibration-chart">
+              <svg viewBox="0 0 360 190" role="img" aria-labelledby="calTitle calDesc">
+                <title id="calTitle">Calibration chart</title>
+                <desc id="calDesc">Reference diagonal compared with observed AI calibration curve.</desc>
+                <line class="axis" x1="34" y1="154" x2="330" y2="154" />
+                <line class="axis" x1="34" y1="154" x2="34" y2="20" />
+                <line class="reference" x1="44" y1="146" x2="320" y2="28" />
+                <polyline id="calibrationLine" class="cal-line" points="44,140 92,120 142,96 196,76 252,54 320,40" />
+                <g class="chart-labels">
+                  <text x="28" y="18">1.0</text>
+                  <text x="304" y="174">confidence</text>
+                  <text x="10" y="164">0</text>
+                </g>
+              </svg>
+            </div>
+
+            <div>
+              <span class="section-label">Co-occurring risk flags</span>
+              <div class="risk-list compact" id="coRiskFlags"></div>
+            </div>
+
+            <div class="learning-actions">
+              <button class="control" id="exportTraining" type="button">Export Training Data</button>
+              <button class="control" id="openReport" type="button">Calibration Report</button>
+            </div>
+          </section>
         </section>
       </main>
     </div>
-    <script type="module" src="./app.js"></script>
+
+    <dialog class="modal" id="reportModal" aria-labelledby="modalTitle">
+      <form method="dialog">
+        <div class="modal-heading">
+          <div>
+            <h2 id="modalTitle">Calibration Report</h2>
+            <p id="modalSummary">Model alignment remains within recruiter review tolerance.</p>
+          </div>
+          <button class="icon-button" value="close" aria-label="Close calibration report">x</button>
+        </div>
+        <div class="report-grid">
+          <article><span>Brier score</span><strong id="brierScore">0.061</strong></article>
+          <article><span>False advance rate</span><strong id="falseAdvance">1.8%</strong></article>
+          <article><span>Review uplift</span><strong id="reviewUplift">+14.6%</strong></article>
+        </div>
+        <p class="modal-copy">Recommendation: keep automated hot-lead routing active, but require human review when injection risk and low source trust co-occur.</p>
+      </form>
+    </dialog>
+
+    <script src="./app.js" defer></script>
   </body>
 </html>

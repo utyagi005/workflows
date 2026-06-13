@@ -1,0 +1,418 @@
+{
+  "name": "AutoApplyOps - AI Copilot",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "Credential-safe AI Copilot export. Ollama is called through HTTP Request at http://localhost:11434/api/generate. If Ollama is down, slow, or returns invalid JSON, the workflow falls back to the deterministic route and marks aiStatus=fallback.",
+        "height": 240,
+        "width": 380,
+        "color": 7
+      },
+      "id": "7a459f9f-5a8e-4e61-8d3d-1c53a47f830f",
+      "name": "Fallback Behavior Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1180,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "content": "Human Review uses the n8n Wait-node resume-webhook pattern. A reviewer approves, rejects, or archives from the resume URL; that resolution is the feedback collection point for ML readiness.",
+        "height": 220,
+        "width": 360,
+        "color": 5
+      },
+      "id": "b5837f37-8b35-4ab7-b93a-1ef6dc0f2f72",
+      "name": "Human Review Resume Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        380,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "autoapplyops/ai-copilot",
+        "responseMode": "lastNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "bde7bd3b-85b1-4429-960c-593ee3d9db7f",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1000,
+        80
+      ],
+      "webhookId": "autoapplyops-ai-copilot"
+    },
+    {
+      "parameters": {
+        "jsCode": "const required = [\"applicationId\", \"company\", \"role\", \"source\"];\nconst missing = required.filter((field) => !$json[field]);\nreturn [{ json: { ...$json, validationStatus: missing.length ? \"invalid\" : \"valid\", validationErrors: missing } }];"
+      },
+      "id": "08f83ea3-1d07-40a3-a1b8-46d5cc908be6",
+      "name": "Validate Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -740,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const DEFAULT_TARGET_SKILLS = [\n  \"javascript\",\n  \"typescript\",\n  \"node\",\n  \"api\",\n  \"apis\",\n  \"automation\",\n  \"n8n\",\n  \"postgresql\",\n  \"python\",\n  \"sql\",\n  \"webhook\",\n  \"react\"\n];\n\nconst REQUIRED_FIELDS = [\"applicationId\", \"company\", \"role\", \"source\"];\nconst EMAIL_RE = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\nconst DEFAULT_WEIGHTS = {\n  deadline: 25,\n  skills: 30,\n  role: 20,\n  location: 10,\n  completeness: 10,\n  source: 5\n};\n\nfunction evaluateApplication(payload, options = {}) {\n  const now = options.now ? new Date(options.now) : new Date();\n  const targetSkills = normalizeSkillList(options.targetSkills || DEFAULT_TARGET_SKILLS);\n  const weights = normalizeWeights(options.weights);\n  const knownApplicationIds = new Set(options.knownApplicationIds || []);\n  const requireSharedSecret = Boolean(options.requireSharedSecret);\n  const expectedSharedSecret = clean(options.expectedSharedSecret);\n  const normalized = normalizePayload(payload);\n  const validation = validatePayload(normalized, {\n    requireSharedSecret,\n    expectedSharedSecret\n  });\n\n  if (!validation.valid) {\n    return buildResult({\n      normalized,\n      validation,\n      score: 0,\n      priority: \"invalid\",\n      route: \"Needs Manual Repair\",\n      reasonCodes: validation.errors.map((error) => error.code || `missing_or_invalid_${error.field}`),\n      followUpDraft: \"Payload needs required fields before a follow-up can be drafted.\",\n      now,\n      weights\n    });\n  }\n\n  const deadlineSignal = scoreDeadline(normalized.deadline, now, weights.deadline);\n  const skillSignal = scoreSkills(normalized.skills, targetSkills, weights.skills);\n  const roleSignal = scoreRole(normalized.role, weights.role);\n  const locationSignal = scoreLocation(normalized.location, weights.location);\n  const completenessSignal = scoreCompleteness(normalized, weights.completeness);\n  const sourceSignal = scoreSource(normalized.source, weights.source);\n  const duplicateSignal = scoreDuplicate(normalized, knownApplicationIds);\n\n  const score = clamp(\n    deadlineSignal.points +\n      skillSignal.points +\n      roleSignal.points +\n      locationSignal.points +\n      completenessSignal.points +\n      sourceSignal.points +\n      duplicateSignal.points,\n    0,\n    100\n  );\n\n  const priority = duplicateSignal.duplicate ? \"duplicate\" : score >= 80 ? \"hot\" : score >= 55 ? \"review\" : \"low\";\n  const route =\n    priority === \"duplicate\"\n      ? \"Duplicate Review\"\n      : priority === \"hot\"\n      ? \"High Priority Follow-up\"\n      : priority === \"review\"\n        ? \"Review Queue\"\n        : \"Archive with Weekly Digest\";\n\n  const reasonCodes = [\n    deadlineSignal.reason,\n    skillSignal.reason,\n    roleSignal.reason,\n    locationSignal.reason,\n    completenessSignal.reason,\n    sourceSignal.reason,\n    duplicateSignal.reason\n  ].filter(Boolean);\n\n  return buildResult({\n    normalized,\n    validation,\n    score,\n    priority,\n    route,\n    reasonCodes,\n    followUpDraft: draftFollowUp(normalized, priority, skillSignal.matches),\n    now,\n    skillMatches: skillSignal.matches,\n    deadlineDays: deadlineSignal.daysUntilDeadline,\n    targetSkills,\n    weights,\n    signals: {\n      deadline: deadlineSignal,\n      skills: skillSignal,\n      role: roleSignal,\n      location: locationSignal,\n      completeness: completenessSignal,\n      source: sourceSignal,\n      duplicate: duplicateSignal\n    }\n  });\n}\n\nfunction normalizePayload(payload = {}) {\n  const body = payload.body && typeof payload.body === \"object\" ? payload.body : payload;\n  const skills = Array.isArray(body.skills)\n    ? body.skills\n    : typeof body.skills === \"string\"\n      ? body.skills.split(\",\")\n      : [];\n\n  return {\n    applicationId: clean(body.applicationId || body.id || body.leadId),\n    applicantName: clean(body.applicantName || body.name || \"Demo Applicant\"),\n    email: clean(body.email),\n    company: clean(body.company),\n    role: clean(body.role || body.title),\n    source: clean(body.source || \"manual-entry\"),\n    sharedSecret: clean(body.sharedSecret || body.secret || body.webhookSecret),\n    deadline: clean(body.deadline || body.applyBy),\n    location: clean(body.location || \"Unknown\"),\n    skills: normalizeSkillList(skills),\n    notes: clean(body.notes || body.resume_text || body.summary),\n    receivedAt: clean(body.receivedAt || body.received_at) || new Date().toISOString()\n  };\n}\n\nfunction sanitizeForLog(normalized) {\n  return {\n    applicationId: normalized.applicationId,\n    applicant: normalized.applicantName ? initials(normalized.applicantName) : \"unknown\",\n    emailDomain: normalized.email && EMAIL_RE.test(normalized.email) ? normalized.email.split(\"@\")[1] : null,\n    company: normalized.company,\n    role: normalized.role,\n    source: normalized.source,\n    deadline: normalized.deadline || null,\n    location: normalized.location,\n    skills: normalized.skills,\n    notesLength: normalized.notes ? normalized.notes.length : 0,\n    receivedAt: normalized.receivedAt\n  };\n}\n\nfunction validatePayload(normalized, options = {}) {\n  const errors = [];\n\n  for (const field of REQUIRED_FIELDS) {\n    if (!normalized[field]) {\n      errors.push({ field, message: `${field} is required` });\n    }\n  }\n\n  if (normalized.email && !EMAIL_RE.test(normalized.email)) {\n    errors.push({ field: \"email\", message: \"email must be valid when provided\" });\n  }\n\n  if (normalized.deadline && Number.isNaN(Date.parse(normalized.deadline))) {\n    errors.push({ field: \"deadline\", message: \"deadline must be a valid date when provided\" });\n  }\n\n  if (options.requireSharedSecret && normalized.sharedSecret !== options.expectedSharedSecret) {\n    errors.push({\n      field: \"sharedSecret\",\n      message: \"sharedSecret did not match the expected webhook secret\",\n      code: \"invalid_shared_secret\"\n    });\n  }\n\n  return { valid: errors.length === 0, errors };\n}\n\nfunction scoreDeadline(deadline, now, maxPoints) {\n  if (!deadline) {\n    return { points: Math.round(maxPoints * 0.32), maxPoints, reason: \"deadline_missing_review\", daysUntilDeadline: null };\n  }\n\n  const days = Math.ceil((new Date(deadline) - now) / 86_400_000);\n\n  if (days < 0) {\n    return { points: 0, maxPoints, reason: \"deadline_expired\", daysUntilDeadline: days };\n  }\n\n  if (days <= 7) {\n    return { points: maxPoints, maxPoints, reason: \"deadline_urgent\", daysUntilDeadline: days };\n  }\n\n  if (days <= 21) {\n    return { points: Math.round(maxPoints * 0.72), maxPoints, reason: \"deadline_soon\", daysUntilDeadline: days };\n  }\n\n  return { points: Math.round(maxPoints * 0.48), maxPoints, reason: \"deadline_open\", daysUntilDeadline: days };\n}\n\nfunction scoreSkills(skills, targetSkills, maxPoints) {\n  const matches = skills.filter((skill) => targetSkills.includes(skill));\n  const ratio = targetSkills.length ? matches.length / Math.min(targetSkills.length, 6) : 0;\n  const points = clamp(Math.round(ratio * maxPoints), 0, maxPoints);\n\n  return {\n    points,\n    maxPoints,\n    matches,\n    reason: matches.length ? `skill_match_${matches.length}` : \"skill_match_none\"\n  };\n}\n\nfunction scoreRole(role, maxPoints) {\n  const value = role.toLowerCase();\n  if (value.includes(\"software\") || value.includes(\"developer\") || value.includes(\"automation\")) {\n    return { points: maxPoints, maxPoints, reason: \"role_high_fit\" };\n  }\n  if (value.includes(\"data\") || value.includes(\"operations\") || value.includes(\"analyst\")) {\n    return { points: Math.round(maxPoints * 0.7), maxPoints, reason: \"role_medium_fit\" };\n  }\n  return { points: Math.round(maxPoints * 0.35), maxPoints, reason: \"role_low_fit\" };\n}\n\nfunction scoreLocation(location, maxPoints) {\n  const value = location.toLowerCase();\n  if (value.includes(\"remote\")) {\n    return { points: maxPoints, maxPoints, reason: \"location_remote\" };\n  }\n  if (value.includes(\"toronto\") || value.includes(\"hybrid\")) {\n    return { points: Math.round(maxPoints * 0.7), maxPoints, reason: \"location_workable\" };\n  }\n  return { points: Math.round(maxPoints * 0.4), maxPoints, reason: \"location_needs_review\" };\n}\n\nfunction scoreCompleteness(normalized, maxPoints) {\n  const optionalFields = [\"email\", \"deadline\", \"location\", \"skills\", \"notes\"];\n  const present = optionalFields.filter((field) => {\n    const value = normalized[field];\n    return Array.isArray(value) ? value.length > 0 : Boolean(value);\n  }).length;\n  return {\n    points: present >= 4 ? maxPoints : present >= 2 ? Math.round(maxPoints * 0.6) : Math.round(maxPoints * 0.2),\n    maxPoints,\n    present,\n    reason: `payload_complete_${present}`\n  };\n}\n\nfunction scoreSource(source, maxPoints) {\n  const value = source.toLowerCase();\n  if (value.includes(\"referral\") || value.includes(\"career\")) {\n    return { points: maxPoints, maxPoints, reason: \"source_high_signal\" };\n  }\n  if (value.includes(\"linkedin\") || value.includes(\"job\")) {\n    return { points: Math.round(maxPoints * 0.6), maxPoints, reason: \"source_medium_signal\" };\n  }\n  return { points: Math.round(maxPoints * 0.2), maxPoints, reason: \"source_manual_or_unknown\" };\n}\n\nfunction scoreDuplicate(normalized, knownApplicationIds) {\n  const duplicate = knownApplicationIds.has(normalized.applicationId);\n  return {\n    points: duplicate ? -35 : 0,\n    maxPoints: 0,\n    duplicate,\n    reason: duplicate ? \"duplicate_detected\" : null\n  };\n}\n\nfunction draftFollowUp(normalized, priority, matches) {\n  const greeting = normalized.applicantName ? `Hi ${normalized.applicantName.split(\" \")[0]},` : \"Hi there,\";\n  const matchText = matches.length\n    ? `Your background in ${humanList(matches)} lines up well with this ${normalized.role} opportunity.`\n    : `Thanks for sharing your interest in the ${normalized.role} opportunity.`;\n  const ask =\n    priority === \"duplicate\"\n      ? \"I found this application already in the intake log, so I marked it for duplicate review instead of creating a second follow-up.\"\n      : priority === \"hot\"\n      ? \"Could you do a quick 15-minute review today or tomorrow so we can move before the deadline?\"\n      : \"I added this to the review queue and will follow up with next steps after the next batch review.\";\n\n  return `${greeting}\\n\\n${matchText}\\n\\n${ask}\\n\\nBest,\\nAutoApplyOps`;\n}\n\nfunction buildResult({\n  normalized,\n  validation,\n  score,\n  priority,\n  route,\n  reasonCodes,\n  followUpDraft,\n  now,\n  skillMatches = [],\n  deadlineDays = null,\n  targetSkills = DEFAULT_TARGET_SKILLS,\n  weights = DEFAULT_WEIGHTS,\n  signals = {}\n}) {\n  const decisionMatrix = Object.entries(signals)\n    .filter(([, signal]) => signal && Number.isFinite(signal.points))\n    .map(([name, signal]) => ({\n      name,\n      points: signal.points,\n      maxPoints: signal.maxPoints,\n      reason: signal.reason || \"not_applicable\"\n    }));\n\n  return {\n    applicationId: normalized.applicationId || \"unassigned\",\n    validationStatus: validation.valid ? \"valid\" : \"invalid\",\n    validationErrors: validation.errors,\n    score,\n    priority,\n    route,\n    reasonCodes,\n    skillMatches,\n    deadlineDays,\n    decisionMatrix,\n    automationHints: buildAutomationHints({ priority, validation, score, deadlineDays }),\n    scoringProfile: {\n      targetSkills,\n      weights\n    },\n    sanitizedPayload: sanitizeForLog(normalized),\n    followUpDraft,\n    auditTrail: [\n      { at: now.toISOString(), event: \"webhook_received\" },\n      { at: now.toISOString(), event: validation.valid ? \"payload_validated\" : \"payload_rejected\" },\n      { at: now.toISOString(), event: `candidate_scored_${score}` },\n      { at: now.toISOString(), event: `route_${slug(route)}` }\n    ]\n  };\n}\n\nfunction buildAutomationHints({ priority, validation, score, deadlineDays }) {\n  if (!validation.valid) {\n    return {\n      nextStep: \"repair_payload\",\n      sla: \"manual review required\",\n      notify: \"workflow-owner\",\n      retryable: true\n    };\n  }\n\n  if (priority === \"hot\") {\n    return {\n      nextStep: \"send_follow_up_for_human_approval\",\n      sla: deadlineDays !== null && deadlineDays <= 2 ? \"same day\" : \"24 hours\",\n      notify: \"priority-channel\",\n      retryable: false\n    };\n  }\n\n  if (priority === \"duplicate\") {\n    return {\n      nextStep: \"merge_or_discard_duplicate\",\n      sla: \"next review block\",\n      notify: \"workflow-owner\",\n      retryable: false\n    };\n  }\n\n  return {\n    nextStep: score >= 55 ? \"batch_review\" : \"weekly_digest\",\n    sla: score >= 55 ? \"48 hours\" : \"weekly\",\n    notify: \"digest\",\n    retryable: false\n  };\n}\n\nfunction normalizeWeights(weights = {}) {\n  const merged = { ...DEFAULT_WEIGHTS, ...weights };\n  const normalized = {};\n\n  for (const [key, fallback] of Object.entries(DEFAULT_WEIGHTS)) {\n    const value = Number(merged[key]);\n    normalized[key] = Number.isFinite(value) && value >= 0 ? value : fallback;\n  }\n\n  return normalized;\n}\n\nfunction normalizeSkillList(skills) {\n  return [...new Set(skills.map((skill) => clean(skill).toLowerCase()).filter(Boolean))];\n}\n\nfunction clean(value) {\n  return typeof value === \"string\" ? value.trim() : value == null ? \"\" : String(value).trim();\n}\n\nfunction initials(name) {\n  return name\n    .split(/\\s+/)\n    .filter(Boolean)\n    .slice(0, 2)\n    .map((part) => part[0]?.toUpperCase())\n    .join(\"\");\n}\n\nfunction humanList(items) {\n  if (items.length <= 1) return items.join(\"\");\n  return `${items.slice(0, -1).join(\", \")} and ${items.at(-1)}`;\n}\n\nfunction slug(value) {\n  return value.toLowerCase().replace(/[^a-z0-9]+/g, \"_\").replace(/^_|_$/g, \"\");\n}\n\nfunction clamp(value, min, max) {\n  return Math.min(max, Math.max(min, value));\n}\n\n\nconst config = $json.config && typeof $json.config === \"object\" ? $json.config : {};\nconst runtimeOptions = {\n  targetSkills: $json.targetSkills || config.targetSkills || DEFAULT_TARGET_SKILLS,\n  weights: $json.weights || config.weights || DEFAULT_WEIGHTS,\n  knownApplicationIds: $json.knownApplicationIds || config.knownApplicationIds || [],\n  requireSharedSecret: Boolean($json.requireSharedSecret || config.requireSharedSecret),\n  expectedSharedSecret: $json.expectedSharedSecret || config.expectedSharedSecret || $env.AUTOAPPLYOPS_WEBHOOK_SECRET || \"\"\n};\n\nconst scoringResult = evaluateApplication($json, runtimeOptions);\nreturn [{ json: { ...$json, scoringResult } }];"
+      },
+      "id": "f65d2e4f-8214-4e51-a197-9a0c7a2f36c48",
+      "name": "Deterministic Score",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OLLAMA_BASE_URL || 'http://localhost:11434' }}/api/generate",
+        "sendBody": true,
+        "contentType": "json",
+        "jsonBody": "={{ { model: $env.AUTOAPPLYOPS_AI_MODEL || 'gemma3:4b', stream: false, format: 'json', prompt: JSON.stringify({ sanitizedPayload: $json.scoringResult.sanitizedPayload, deterministicScore: $json.scoringResult.score, route: $json.scoringResult.route, requiredShape: { aiFitSummary: '1-3 sentence plain summary', resumeSignalScore: 0, riskFlags: [], followUpTone: 'neutral', recommendedAction: 'hold', confidence: 0.55, aiStatus: 'available', modelUsed: $env.AUTOAPPLYOPS_AI_MODEL || 'gemma3:4b', evaluatedAt: new Date().toISOString() } }) } }}",
+        "options": {
+          "timeout": 5000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "c1df1a13-8e47-42b9-8a61-0a7fdc6e06d6",
+      "name": "AI Evaluate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -210,
+        80
+      ],
+      "notesInFlow": true,
+      "notes": "Local Ollama call only; no credentials. Downstream Route Decision treats HTTP errors, timeout, invalid JSON, or missing fields as aiStatus=fallback."
+    },
+    {
+      "parameters": {
+        "jsCode": "const scoring = $json.scoringResult || {};\nlet ai = null;\ntry {\n  ai = typeof $json.response === \"string\" ? JSON.parse($json.response) : null;\n} catch (error) {\n  ai = null;\n}\nconst required = [\"aiFitSummary\", \"resumeSignalScore\", \"riskFlags\", \"followUpTone\", \"recommendedAction\", \"confidence\", \"aiStatus\", \"modelUsed\", \"evaluatedAt\"];\nconst complete = ai && required.every((field) => Object.hasOwn(ai, field));\nif (!complete) {\n  ai = {\n    aiFitSummary: \"AI unavailable; deterministic rules engine is routing this application.\",\n    resumeSignalScore: scoring.score || 0,\n    riskFlags: scoring.priority === \"duplicate\" ? [{ flag: \"duplicate_suspected\", severity: \"medium\" }] : [],\n    followUpTone: scoring.priority === \"hot\" ? \"warm\" : \"neutral\",\n    recommendedAction: scoring.priority === \"hot\" ? \"advance\" : scoring.priority === \"low\" ? \"archive\" : \"hold\",\n    confidence: scoring.priority === \"hot\" ? 0.78 : 0.58,\n    aiStatus: \"fallback\",\n    modelUsed: \"rules-engine/v1\",\n    evaluatedAt: new Date().toISOString()\n  };\n}\nconst humanReviewRequired = ai.confidence < 0.55 || ai.recommendedAction === \"escalate_to_human\" || ai.riskFlags.some((risk) => risk.severity === \"high\");\nconst route = scoring.priority === \"duplicate\" ? \"duplicate\" : humanReviewRequired ? \"human_review\" : ai.recommendedAction;\nreturn [{ json: { ...$json, aiEvaluation: ai, humanReviewRequired, routeDecision: route } }];"
+      },
+      "id": "af7d1275-0efa-4e0c-bbce-e6d43a68c4bd",
+      "name": "Route Decision",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        50,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.routeDecision }}",
+                    "rightValue": "advance",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Hot Lead"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.routeDecision }}",
+                    "rightValue": "hold",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Hold"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.routeDecision }}",
+                    "rightValue": "human_review",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Human Review"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.routeDecision }}",
+                    "rightValue": "archive",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Archive"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.routeDecision }}",
+                    "rightValue": "duplicate",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Duplicate Guard"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Hold"
+        }
+      },
+      "id": "c335f219-6bcb-44a2-a88b-7c86f148b45d",
+      "name": "Route Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        310,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map((item) => ({ json: { ...item.json, exitPoint: 'hot_lead', feedbackSource: 'auto_advance' } }));"
+      },
+      "id": "b39c1fae-70fb-4a32-878a-4efbcb1b2fbb",
+      "name": "Hot Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        620,
+        -130
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map((item) => ({ json: { ...item.json, exitPoint: 'hold' } }));"
+      },
+      "id": "40df2f6e-7ec4-4958-b57c-5185bf8f1988",
+      "name": "Hold",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        620,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "options": {}
+      },
+      "id": "a6ade404-854e-4f66-96a6-fb13b6986f24",
+      "name": "Human Review",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        620,
+        170
+      ],
+      "notesInFlow": true,
+      "notes": "Reviewer resolves through the Wait resume webhook. Record feedback with source=human_review when the resume payload is received."
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map((item) => ({ json: { ...item.json, exitPoint: 'archive', feedbackSource: 'auto_archive' } }));"
+      },
+      "id": "58c10daf-ae2d-4f2d-9a04-7c652ec3d71d",
+      "name": "Archive",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        620,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map((item) => ({ json: { ...item.json, exitPoint: 'duplicate_guard', feedbackSource: 'duplicate_guard' } }));"
+      },
+      "id": "0eeec2a2-fc16-46e5-9654-b01fe7f46f7e",
+      "name": "Duplicate Guard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        620,
+        470
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Payload": {
+      "main": [
+        [
+          {
+            "node": "Deterministic Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deterministic Score": {
+      "main": [
+        [
+          {
+            "node": "AI Evaluate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Evaluate": {
+      "main": [
+        [
+          {
+            "node": "Route Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Decision": {
+      "main": [
+        [
+          {
+            "node": "Route Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Switch": {
+      "main": [
+        [
+          {
+            "node": "Hot Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Hold",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Human Review",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Archive",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Duplicate Guard",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Hold",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "autoapplyops-ai-copilot-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "portfolio-demo"
+  },
+  "tags": [
+    {
+      "name": "portfolio"
+    },
+    {
+      "name": "ai-copilot"
+    },
+    {
+      "name": "ollama"
+    }
+  ]
+}

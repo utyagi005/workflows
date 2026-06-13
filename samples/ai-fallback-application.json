@@ -1,0 +1,12 @@
+{
+  "applicationId": "ai-fallback-001",
+  "applicantName": "Ari Patel",
+  "email": "ari.patel@example.com",
+  "company": "Civic Data Lab",
+  "role": "Operations Intern",
+  "deadline": "2026-07-12",
+  "location": "Hybrid",
+  "skills": ["SQL", "automation", "documentation", "spreadsheets"],
+  "source": "job-board",
+  "notes": "Good process documentation and SQL exposure, but the technical project scope is still unclear."
+}

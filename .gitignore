@@ -11,6 +11,12 @@ execution-data/
 credentials*.json
 *.sqlite
 
+# Feedback and training data — generated at runtime
+data/feedback.db
+data/feedback.db-shm
+data/feedback.db-wal
+data/training-export.json
+
 # Logs and local recordings
 *.log
 npm-debug.log*

@@ -23,7 +23,7 @@
         "postgresql"
       ],
       "notesLength": 60,
-      "receivedAt": "2026-06-11T03:46:10.817Z"
+      "receivedAt": "2026-06-13T01:55:40.846Z"
     },
     "reasonCodes": [
       "deadline_urgent",
@@ -76,7 +76,25 @@
         "maxPoints": 0,
         "reason": "not_applicable"
       }
-    ]
+    ],
+    "aiEvaluation": {
+      "aiFitSummary": "The application is a strong match for Software Engineering Intern. The deterministic score is 90, so it can move forward with normal review.",
+      "resumeSignalScore": 90,
+      "riskFlags": [],
+      "followUpTone": "warm",
+      "recommendedAction": "advance",
+      "confidence": 0.78,
+      "aiStatus": "disabled",
+      "modelUsed": "rules-engine/v1",
+      "evaluatedAt": "2026-06-13T01:55:40.847Z"
+    },
+    "humanReviewRequired": false,
+    "feedback": {
+      "feedbackId": "20246cd0-13bd-4818-ae95-09e750388843",
+      "source": "auto_advance",
+      "decision": "still_in_process",
+      "aiWasCorrect": true
+    }
   },
   {
     "file": "samples/review-application.json",
@@ -103,7 +121,7 @@
         "api"
       ],
       "notesLength": 61,
-      "receivedAt": "2026-06-11T03:46:10.819Z"
+      "receivedAt": "2026-06-13T01:55:40.855Z"
     },
     "reasonCodes": [
       "deadline_open",
@@ -156,7 +174,25 @@
         "maxPoints": 0,
         "reason": "not_applicable"
       }
-    ]
+    ],
+    "aiEvaluation": {
+      "aiFitSummary": "The application is usable but not ready for fast-track routing. Keep it in the hold queue for a reviewer or batch pass.",
+      "resumeSignalScore": 61,
+      "riskFlags": [],
+      "followUpTone": "neutral",
+      "recommendedAction": "hold",
+      "confidence": 0.58,
+      "aiStatus": "disabled",
+      "modelUsed": "rules-engine/v1",
+      "evaluatedAt": "2026-06-13T01:55:40.855Z"
+    },
+    "humanReviewRequired": false,
+    "feedback": {
+      "feedbackId": "39ee528f-72fc-4386-82fa-451d9b171a6f",
+      "source": "human_review",
+      "decision": "still_in_process",
+      "aiWasCorrect": true
+    }
   },
   {
     "file": "samples/invalid-application.json",
@@ -177,12 +213,30 @@
       "location": "Unknown",
       "skills": [],
       "notesLength": 0,
-      "receivedAt": "2026-06-11T03:46:10.819Z"
+      "receivedAt": "2026-06-13T01:55:40.856Z"
     },
     "reasonCodes": [
       "missing_or_invalid_role"
     ],
-    "decisionMatrix": []
+    "decisionMatrix": [],
+    "aiEvaluation": {
+      "aiFitSummary": "The application needs human review before automation continues. The rules engine found risk signals that should be checked directly.",
+      "resumeSignalScore": 0,
+      "riskFlags": [
+        {
+          "flag": "missing_resume",
+          "severity": "medium"
+        }
+      ],
+      "followUpTone": "neutral",
+      "recommendedAction": "escalate_to_human",
+      "confidence": 0.2,
+      "aiStatus": "disabled",
+      "modelUsed": "rules-engine/v1",
+      "evaluatedAt": "2026-06-13T01:55:40.856Z"
+    },
+    "humanReviewRequired": true,
+    "feedback": null
   },
   {
     "file": "samples/duplicate-application.json",
@@ -206,7 +260,7 @@
         "automation"
       ],
       "notesLength": 0,
-      "receivedAt": "2026-06-11T03:46:10.819Z"
+      "receivedAt": "2026-06-13T01:55:40.856Z"
     },
     "reasonCodes": [
       "deadline_urgent",
@@ -260,7 +314,34 @@
         "maxPoints": 0,
         "reason": "duplicate_detected"
       }
-    ]
+    ],
+    "aiEvaluation": {
+      "aiFitSummary": "The application is usable but not ready for fast-track routing. Keep it in the hold queue for a reviewer or batch pass.",
+      "resumeSignalScore": 45,
+      "riskFlags": [
+        {
+          "flag": "duplicate_suspected",
+          "severity": "medium"
+        },
+        {
+          "flag": "missing_resume",
+          "severity": "medium"
+        }
+      ],
+      "followUpTone": "neutral",
+      "recommendedAction": "hold",
+      "confidence": 0.7,
+      "aiStatus": "disabled",
+      "modelUsed": "rules-engine/v1",
+      "evaluatedAt": "2026-06-13T01:55:40.856Z"
+    },
+    "humanReviewRequired": false,
+    "feedback": {
+      "feedbackId": "30171436-e79f-4d30-948a-4324927bd1e3",
+      "source": "duplicate_guard",
+      "decision": "duplicate",
+      "aiWasCorrect": null
+    }
   },
   {
     "file": "samples/secret-failure-application.json",
@@ -281,12 +362,30 @@
       "location": "Unknown",
       "skills": [],
       "notesLength": 0,
-      "receivedAt": "2026-06-11T03:46:10.820Z"
+      "receivedAt": "2026-06-13T01:55:40.857Z"
     },
     "reasonCodes": [
       "invalid_shared_secret"
     ],
-    "decisionMatrix": []
+    "decisionMatrix": [],
+    "aiEvaluation": {
+      "aiFitSummary": "The application needs human review before automation continues. The rules engine found risk signals that should be checked directly.",
+      "resumeSignalScore": 0,
+      "riskFlags": [
+        {
+          "flag": "missing_resume",
+          "severity": "medium"
+        }
+      ],
+      "followUpTone": "neutral",
+      "recommendedAction": "escalate_to_human",
+      "confidence": 0.2,
+      "aiStatus": "disabled",
+      "modelUsed": "rules-engine/v1",
+      "evaluatedAt": "2026-06-13T01:55:40.857Z"
+    },
+    "humanReviewRequired": true,
+    "feedback": null
   },
   {
     "file": "samples/tuned-weights-application.json",
@@ -311,7 +410,7 @@
         "api"
       ],
       "notesLength": 0,
-      "receivedAt": "2026-06-11T03:46:10.820Z"
+      "receivedAt": "2026-06-13T01:55:40.858Z"
     },
     "reasonCodes": [
       "deadline_open",
@@ -364,6 +463,427 @@
         "maxPoints": 0,
         "reason": "not_applicable"
       }
-    ]
+    ],
+    "aiEvaluation": {
+      "aiFitSummary": "The application is usable but not ready for fast-track routing. Keep it in the hold queue for a reviewer or batch pass.",
+      "resumeSignalScore": 70,
+      "riskFlags": [
+        {
+          "flag": "missing_resume",
+          "severity": "medium"
+        }
+      ],
+      "followUpTone": "neutral",
+      "recommendedAction": "hold",
+      "confidence": 0.58,
+      "aiStatus": "disabled",
+      "modelUsed": "rules-engine/v1",
+      "evaluatedAt": "2026-06-13T01:55:40.858Z"
+    },
+    "humanReviewRequired": false,
+    "feedback": {
+      "feedbackId": "e006fdb8-57c4-4c60-babc-222bf301a14d",
+      "source": "human_review",
+      "decision": "still_in_process",
+      "aiWasCorrect": true
+    }
+  },
+  {
+    "file": "samples/ai-success-application.json",
+    "applicationId": "ai-success-001",
+    "validationStatus": "valid",
+    "priority": "hot",
+    "route": "High Priority Follow-up",
+    "score": 100,
+    "nextStep": "send_follow_up_for_human_approval",
+    "sanitizedPayload": {
+      "applicationId": "ai-success-001",
+      "applicant": "MC",
+      "emailDomain": "example.com",
+      "company": "Northstar Robotics",
+      "role": "Software Engineering Intern",
+      "source": "referral",
+      "deadline": "2026-06-15",
+      "location": "Remote",
+      "skills": [
+        "javascript",
+        "node",
+        "api",
+        "automation",
+        "postgresql",
+        "n8n"
+      ],
+      "notesLength": 97,
+      "receivedAt": "2026-06-13T01:55:40.859Z"
+    },
+    "reasonCodes": [
+      "deadline_urgent",
+      "skill_match_6",
+      "role_high_fit",
+      "location_remote",
+      "payload_complete_5",
+      "source_high_signal"
+    ],
+    "decisionMatrix": [
+      {
+        "name": "deadline",
+        "points": 25,
+        "maxPoints": 25,
+        "reason": "deadline_urgent"
+      },
+      {
+        "name": "skills",
+        "points": 30,
+        "maxPoints": 30,
+        "reason": "skill_match_6"
+      },
+      {
+        "name": "role",
+        "points": 20,
+        "maxPoints": 20,
+        "reason": "role_high_fit"
+      },
+      {
+        "name": "location",
+        "points": 10,
+        "maxPoints": 10,
+        "reason": "location_remote"
+      },
+      {
+        "name": "completeness",
+        "points": 10,
+        "maxPoints": 10,
+        "reason": "payload_complete_5"
+      },
+      {
+        "name": "source",
+        "points": 5,
+        "maxPoints": 5,
+        "reason": "source_high_signal"
+      },
+      {
+        "name": "duplicate",
+        "points": 0,
+        "maxPoints": 0,
+        "reason": "not_applicable"
+      }
+    ],
+    "aiEvaluation": {
+      "aiFitSummary": "The application is a strong match for Software Engineering Intern. The deterministic score is 100, so it can move forward with normal review.",
+      "resumeSignalScore": 100,
+      "riskFlags": [],
+      "followUpTone": "warm",
+      "recommendedAction": "advance",
+      "confidence": 0.78,
+      "aiStatus": "disabled",
+      "modelUsed": "rules-engine/v1",
+      "evaluatedAt": "2026-06-13T01:55:40.859Z"
+    },
+    "humanReviewRequired": false,
+    "feedback": {
+      "feedbackId": "fd3dbfe8-4347-4815-9835-4ba7e1c9e7f7",
+      "source": "auto_advance",
+      "decision": "still_in_process",
+      "aiWasCorrect": true
+    }
+  },
+  {
+    "file": "samples/ai-fallback-application.json",
+    "applicationId": "ai-fallback-001",
+    "validationStatus": "valid",
+    "priority": "review",
+    "route": "Review Queue",
+    "score": 56,
+    "nextStep": "batch_review",
+    "sanitizedPayload": {
+      "applicationId": "ai-fallback-001",
+      "applicant": "AP",
+      "emailDomain": "example.com",
+      "company": "Civic Data Lab",
+      "role": "Operations Intern",
+      "source": "job-board",
+      "deadline": "2026-07-12",
+      "location": "Hybrid",
+      "skills": [
+        "sql",
+        "automation",
+        "documentation",
+        "spreadsheets"
+      ],
+      "notesLength": 94,
+      "receivedAt": "2026-06-13T01:55:40.860Z"
+    },
+    "reasonCodes": [
+      "deadline_open",
+      "skill_match_2",
+      "role_medium_fit",
+      "location_workable",
+      "payload_complete_5",
+      "source_medium_signal"
+    ],
+    "decisionMatrix": [
+      {
+        "name": "deadline",
+        "points": 12,
+        "maxPoints": 25,
+        "reason": "deadline_open"
+      },
+      {
+        "name": "skills",
+        "points": 10,
+        "maxPoints": 30,
+        "reason": "skill_match_2"
+      },
+      {
+        "name": "role",
+        "points": 14,
+        "maxPoints": 20,
+        "reason": "role_medium_fit"
+      },
+      {
+        "name": "location",
+        "points": 7,
+        "maxPoints": 10,
+        "reason": "location_workable"
+      },
+      {
+        "name": "completeness",
+        "points": 10,
+        "maxPoints": 10,
+        "reason": "payload_complete_5"
+      },
+      {
+        "name": "source",
+        "points": 3,
+        "maxPoints": 5,
+        "reason": "source_medium_signal"
+      },
+      {
+        "name": "duplicate",
+        "points": 0,
+        "maxPoints": 0,
+        "reason": "not_applicable"
+      }
+    ],
+    "aiEvaluation": {
+      "aiFitSummary": "The application is usable but not ready for fast-track routing. Keep it in the hold queue for a reviewer or batch pass.",
+      "resumeSignalScore": 56,
+      "riskFlags": [],
+      "followUpTone": "neutral",
+      "recommendedAction": "hold",
+      "confidence": 0.58,
+      "aiStatus": "fallback",
+      "modelUsed": "rules-engine/v1",
+      "evaluatedAt": "2026-06-13T01:55:40.860Z"
+    },
+    "humanReviewRequired": false,
+    "feedback": {
+      "feedbackId": "683f03f5-a72a-4dba-a2ba-30caa34dd5f2",
+      "source": "human_review",
+      "decision": "still_in_process",
+      "aiWasCorrect": null
+    }
+  },
+  {
+    "file": "samples/human-review-application.json",
+    "applicationId": "human-review-001",
+    "validationStatus": "valid",
+    "priority": "review",
+    "route": "Review Queue",
+    "score": 61,
+    "nextStep": "batch_review",
+    "sanitizedPayload": {
+      "applicationId": "human-review-001",
+      "applicant": "RM",
+      "emailDomain": "example.com",
+      "company": "SignalBridge",
+      "role": "Data Operations Intern",
+      "source": "linkedin",
+      "deadline": "2026-07-14",
+      "location": "Hybrid",
+      "skills": [
+        "sql",
+        "automation",
+        "api"
+      ],
+      "notesLength": 107,
+      "receivedAt": "2026-06-13T01:55:40.860Z"
+    },
+    "reasonCodes": [
+      "deadline_open",
+      "skill_match_3",
+      "role_medium_fit",
+      "location_workable",
+      "payload_complete_5",
+      "source_medium_signal"
+    ],
+    "decisionMatrix": [
+      {
+        "name": "deadline",
+        "points": 12,
+        "maxPoints": 25,
+        "reason": "deadline_open"
+      },
+      {
+        "name": "skills",
+        "points": 15,
+        "maxPoints": 30,
+        "reason": "skill_match_3"
+      },
+      {
+        "name": "role",
+        "points": 14,
+        "maxPoints": 20,
+        "reason": "role_medium_fit"
+      },
+      {
+        "name": "location",
+        "points": 7,
+        "maxPoints": 10,
+        "reason": "location_workable"
+      },
+      {
+        "name": "completeness",
+        "points": 10,
+        "maxPoints": 10,
+        "reason": "payload_complete_5"
+      },
+      {
+        "name": "source",
+        "points": 3,
+        "maxPoints": 5,
+        "reason": "source_medium_signal"
+      },
+      {
+        "name": "duplicate",
+        "points": 0,
+        "maxPoints": 0,
+        "reason": "not_applicable"
+      }
+    ],
+    "aiEvaluation": {
+      "aiFitSummary": "The application is usable but not ready for fast-track routing. Keep it in the hold queue for a reviewer or batch pass.",
+      "resumeSignalScore": 61,
+      "riskFlags": [],
+      "followUpTone": "neutral",
+      "recommendedAction": "hold",
+      "confidence": 0.58,
+      "aiStatus": "fallback",
+      "modelUsed": "rules-engine/v1",
+      "evaluatedAt": "2026-06-13T01:55:40.860Z"
+    },
+    "humanReviewRequired": false,
+    "feedback": {
+      "feedbackId": "06366b6e-6b13-45df-98d0-2ee297fd927d",
+      "source": "human_review",
+      "decision": "rejected",
+      "aiWasCorrect": null
+    }
+  },
+  {
+    "file": "samples/risky-payload-application.json",
+    "applicationId": "risky-payload-001",
+    "validationStatus": "valid",
+    "priority": "hot",
+    "route": "High Priority Follow-up",
+    "score": 90,
+    "nextStep": "send_follow_up_for_human_approval",
+    "sanitizedPayload": {
+      "applicationId": "risky-payload-001",
+      "applicant": "TR",
+      "emailDomain": "example.com",
+      "company": "Northstar Robotics",
+      "role": "Software Engineering Intern",
+      "source": "career-page",
+      "deadline": "2026-06-16",
+      "location": "Remote",
+      "skills": [
+        "javascript",
+        "apis",
+        "automation",
+        "postgresql"
+      ],
+      "notesLength": 0,
+      "receivedAt": "2026-06-13T01:55:40.861Z"
+    },
+    "reasonCodes": [
+      "deadline_urgent",
+      "skill_match_4",
+      "role_high_fit",
+      "location_remote",
+      "payload_complete_4",
+      "source_high_signal"
+    ],
+    "decisionMatrix": [
+      {
+        "name": "deadline",
+        "points": 25,
+        "maxPoints": 25,
+        "reason": "deadline_urgent"
+      },
+      {
+        "name": "skills",
+        "points": 20,
+        "maxPoints": 30,
+        "reason": "skill_match_4"
+      },
+      {
+        "name": "role",
+        "points": 20,
+        "maxPoints": 20,
+        "reason": "role_high_fit"
+      },
+      {
+        "name": "location",
+        "points": 10,
+        "maxPoints": 10,
+        "reason": "location_remote"
+      },
+      {
+        "name": "completeness",
+        "points": 10,
+        "maxPoints": 10,
+        "reason": "payload_complete_4"
+      },
+      {
+        "name": "source",
+        "points": 5,
+        "maxPoints": 5,
+        "reason": "source_high_signal"
+      },
+      {
+        "name": "duplicate",
+        "points": 0,
+        "maxPoints": 0,
+        "reason": "not_applicable"
+      }
+    ],
+    "aiEvaluation": {
+      "aiFitSummary": "The application needs human review before automation continues. The rules engine found risk signals that should be checked directly.",
+      "resumeSignalScore": 90,
+      "riskFlags": [
+        {
+          "flag": "missing_resume",
+          "severity": "high"
+        },
+        {
+          "flag": "salary_mismatch",
+          "severity": "high"
+        }
+      ],
+      "followUpTone": "cautious",
+      "recommendedAction": "escalate_to_human",
+      "confidence": 0.42,
+      "aiStatus": "disabled",
+      "modelUsed": "rules-engine/v1",
+      "evaluatedAt": "2026-06-13T01:55:40.861Z"
+    },
+    "humanReviewRequired": true,
+    "feedback": {
+      "feedbackId": "f8d804ff-807d-4d64-a527-7ec9cc634054",
+      "source": "auto_advance",
+      "decision": "still_in_process",
+      "aiWasCorrect": true
+    }
   }
 ]

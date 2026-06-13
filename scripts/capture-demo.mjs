@@ -19,11 +19,12 @@ try {
   await page.goto(BASE_URL, { waitUntil: "networkidle" });
   await page.screenshot({ path: "docs/assets/demo-dashboard.png", fullPage: true });
 
-  await page.selectOption("#payloadSelect", "review-application.json");
+  await page.locator('[data-action="review"]').click();
   await page.waitForTimeout(400);
   await page.screenshot({ path: "docs/assets/demo-review-queue.png", fullPage: true });
 
-  await page.selectOption("#payloadSelect", "invalid-application.json");
+  await page.goto(BASE_URL, { waitUntil: "networkidle" });
+  await page.locator('[data-action="invalid"]').click();
   await page.waitForTimeout(400);
   await page.screenshot({ path: "docs/assets/demo-invalid-payload.png", fullPage: true });
 
